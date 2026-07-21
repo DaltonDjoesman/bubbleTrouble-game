@@ -2,7 +2,16 @@ from __future__ import annotations
 
 import pygame
 
-from consts import BALL_SIZES, GRAVITY, screenHeight, screenWidth
+from consts import BALL_SIZES, BALL_TINTS, GRAVITY, screenHeight, screenWidth
+
+
+def _tint_surface(base: pygame.Surface, tint: tuple[int, int, int]) -> pygame.Surface:
+    """Multiply white-ish ball pixels toward a neon tint (preserves alpha)."""
+    out = base.copy()
+    tint_layer = pygame.Surface(out.get_size(), flags=pygame.SRCALPHA)
+    tint_layer.fill((*tint, 255))
+    out.blit(tint_layer, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return out
 
 
 class Ball(pygame.sprite.Sprite):
@@ -20,9 +29,10 @@ class Ball(pygame.sprite.Sprite):
         self.size = size
         self.bounce_impulse = BALL_SIZES[size]["bounce"]
         scale = BALL_SIZES[size]["scale"]
-        bw, bh = base_image.get_size()
+        tinted = _tint_surface(base_image, BALL_TINTS[size])
+        bw, bh = tinted.get_size()
         self.image = pygame.transform.scale(
-            base_image, (max(1, int(bw * scale)), max(1, int(bh * scale)))
+            tinted, (max(1, int(bw * scale)), max(1, int(bh * scale)))
         )
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.vel_x, self.vel_y = float(vel[0]), float(vel[1])

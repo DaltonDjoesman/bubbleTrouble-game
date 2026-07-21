@@ -6,10 +6,10 @@
 
 ## 2. Cyberpunk presentation
 
-- [ ] 2.1 Replace Knight usage with Cyborg Idle/Run (and Jump if used)
-- [ ] 2.2 Apply bullet sprite choice consistently; add brief shoot effect on fire
-- [ ] 2.3 Replace flat black background with cyberpunk gradient/pattern/image
-- [ ] 2.4 Optionally tint or restyle balls so they fit the theme
+- [x] 2.1 Replace Knight usage with Cyborg Idle/Run (and Jump if used)
+- [x] 2.2 Apply bullet sprite choice consistently; add brief shoot effect on fire
+- [x] 2.3 Replace flat black background with cyberpunk gradient/pattern/image
+- [x] 2.4 Optionally tint or restyle balls so they fit the theme
 
 ## 3. HUD feedback
 

@@ -29,6 +29,37 @@ from consts import (
     screenWidth,
 )
 from player import Player
+from shoot_effect import ShootEffect
+
+# Cyberpunk palette (HUD + arena)
+_BG_TOP = (12, 8, 32)
+_BG_BOTTOM = (28, 10, 48)
+_NEON_CYAN = (80, 240, 255)
+_NEON_MAGENTA = (255, 70, 180)
+_HUD_DIM = (180, 200, 220)
+_OVERLAY = (8, 4, 20, 180)
+
+
+def _build_arena_background() -> pygame.Surface:
+    """Vertical cyberpunk gradient + scanlines + neon floor accent."""
+    surf = pygame.Surface((screenWidth, screenHeight))
+    for y in range(screenHeight):
+        t = y / max(1, screenHeight - 1)
+        r = int(_BG_TOP[0] + (_BG_BOTTOM[0] - _BG_TOP[0]) * t)
+        g = int(_BG_TOP[1] + (_BG_BOTTOM[1] - _BG_TOP[1]) * t)
+        b = int(_BG_TOP[2] + (_BG_BOTTOM[2] - _BG_TOP[2]) * t)
+        pygame.draw.line(surf, (r, g, b), (0, y), (screenWidth, y))
+    # Subtle scanlines (skip every other band; keep gradient visible)
+    for y in range(2, screenHeight, 4):
+        pygame.draw.line(surf, (0, 0, 0), (0, y), (screenWidth, y))
+    # Neon floor strip
+    pygame.draw.line(
+        surf, _NEON_CYAN, (0, screenHeight - 3), (screenWidth, screenHeight - 3), 2
+    )
+    pygame.draw.line(
+        surf, _NEON_MAGENTA, (0, screenHeight - 6), (screenWidth, screenHeight - 6), 1
+    )
+    return surf
 
 
 class Game:
@@ -38,10 +69,12 @@ class Game:
         pygame.display.set_caption("Bubble Trouble")
         self.font = pygame.font.Font(None, 36)
         self.big_font = pygame.font.Font(None, 64)
+        self.background = _build_arena_background()
 
         self.bolas = pygame.sprite.Group()
         self.player = pygame.sprite.GroupSingle()
         self.bullets = pygame.sprite.Group()
+        self.effects = pygame.sprite.Group()
 
         self.state = "playing"
         self.lives = DEFAULT_LIVES
@@ -54,6 +87,7 @@ class Game:
     def reset_match(self) -> None:
         self.bolas.empty()
         self.bullets.empty()
+        self.effects.empty()
         self.player.empty()
         self.lives = DEFAULT_LIVES
         self.iframe_until = 0
@@ -88,6 +122,7 @@ class Game:
             return
         # Laser grows upward from the player's top (classic vertical beam)
         self.bullets.add(Bullet(p.rect.centerx, p.rect.top))
+        self.effects.add(ShootEffect(p.rect.centerx, p.rect.top))
         self.fire_cooldown_until = now + BULLET_COOLDOWN_MS
 
     def _handle_bullet_ball_hits(self) -> None:
@@ -106,7 +141,8 @@ class Game:
         now = pygame.time.get_ticks()
         if now < self.iframe_until:
             return
-        if not pygame.sprite.spritecollide(p, self.bolas, False):
+        hit = any(p.hitbox.colliderect(ball.rect) for ball in self.bolas)
+        if not hit:
             return
 
         self.lives -= 1
@@ -115,8 +151,8 @@ class Game:
             self.state = "game_over"
             return
 
+        # Stay in place; brief i-frames only
         self.iframe_until = now + IFRAME_MS
-        p.rect.midbottom = (screenWidth // 2, screenHeight - 4)
         self.bullets.empty()
 
     def _check_win(self) -> None:
@@ -124,17 +160,26 @@ class Game:
             self.state = "won"
 
     def _draw_hud(self) -> None:
-        lives_surf = self.font.render(f"Lives: {self.lives}", True, (255, 255, 255))
+        # High-contrast lives label (shadow + neon)
+        label = f"Lives: {self.lives}"
+        shadow = self.font.render(label, True, (0, 0, 0))
+        lives_surf = self.font.render(label, True, _NEON_CYAN)
+        self.screen.blit(shadow, (12, 12))
         self.screen.blit(lives_surf, (10, 10))
 
+        if self.state in ("won", "game_over"):
+            dim = pygame.Surface((screenWidth, screenHeight), flags=pygame.SRCALPHA)
+            dim.fill(_OVERLAY)
+            self.screen.blit(dim, (0, 0))
+
         if self.state == "won":
-            msg = self.big_font.render("YOU WIN", True, (80, 220, 120))
-            hint = self.font.render("Press R to restart", True, (200, 200, 200))
+            msg = self.big_font.render("YOU WIN", True, _NEON_CYAN)
+            hint = self.font.render("Press R to restart", True, _HUD_DIM)
             self.screen.blit(msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20)))
             self.screen.blit(hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30)))
         elif self.state == "game_over":
-            msg = self.big_font.render("GAME OVER", True, (220, 80, 80))
-            hint = self.font.render("Press R to restart", True, (200, 200, 200))
+            msg = self.big_font.render("GAME OVER", True, _NEON_MAGENTA)
+            hint = self.font.render("Press R to restart", True, _HUD_DIM)
             self.screen.blit(msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20)))
             self.screen.blit(hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30)))
 
@@ -153,11 +198,12 @@ class Game:
                     elif event.key == pygame.K_r and self.state in ("won", "game_over"):
                         self.reset_match()
 
-            self.screen.fill((20, 20, 28))
+            self.screen.blit(self.background, (0, 0))
 
             if self.state == "playing":
                 self.bolas.update()
                 self.bullets.update()
+                self.effects.update()
                 self.player.update()
                 self._handle_bullet_ball_hits()
                 self._handle_player_ball_hits()
@@ -165,6 +211,7 @@ class Game:
 
             self.bolas.draw(self.screen)
             self.bullets.draw(self.screen)
+            self.effects.draw(self.screen)
             # Blink player during i-frames
             if self.player.sprite is not None:
                 if self.state != "playing" or now >= self.iframe_until or (now // 100) % 2 == 0:

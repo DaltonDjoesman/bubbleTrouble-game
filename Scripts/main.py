@@ -60,7 +60,7 @@ class Game:
         self.fire_cooldown_until = 0
         self.state = "playing"
 
-        self.player.add(Player(screenWidth // 2, screenHeight - 45))
+        self.player.add(Player(screenWidth // 2, screenHeight - 4))
         # Playable arena: one large + one medium ball
         self.bolas.add(
             Ball(self._ball_base_image, "L", screenWidth // 3, screenHeight // 3, (2, 0))
@@ -86,12 +86,14 @@ class Game:
         p = self.player.sprite
         if p is None:
             return
+        # Laser grows upward from the player's top (classic vertical beam)
         self.bullets.add(Bullet(p.rect.centerx, p.rect.top))
         self.fire_cooldown_until = now + BULLET_COOLDOWN_MS
 
     def _handle_bullet_ball_hits(self) -> None:
+        # Laser removed on hit; ball split/removed
         hits = pygame.sprite.groupcollide(self.bullets, self.bolas, True, False)
-        for _bullet, balls in hits.items():
+        for _laser, balls in hits.items():
             for ball in balls:
                 children = ball.split(self._ball_base_image)
                 ball.kill()
@@ -114,7 +116,7 @@ class Game:
             return
 
         self.iframe_until = now + IFRAME_MS
-        p.rect.center = (screenWidth // 2, screenHeight - 45)
+        p.rect.midbottom = (screenWidth // 2, screenHeight - 4)
         self.bullets.empty()
 
     def _check_win(self) -> None:

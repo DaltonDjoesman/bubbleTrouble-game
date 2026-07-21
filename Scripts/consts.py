@@ -7,9 +7,10 @@ screenHeight = 600
 FPS = 60
 GRAVITY = 0.3
 
-MAX_BULLETS = 2
+MAX_BULLETS = 2  # max active lasers
 BULLET_COOLDOWN_MS = 150
-BULLET_SPEED = 10
+LASER_GROW_SPEED = 10
+LASER_WIDTH = 6
 DEFAULT_LIVES = 3
 IFRAME_MS = 1500
 
@@ -36,8 +37,8 @@ PLAYER_RUN_FRAMES = [
     CRAFTPIX / "1 Characters" / "3 Cyborg" / "Run2.png",
 ]
 
-BULLET_SPRITE = CRAFTPIX / "5 Bullets" / "1.png"
+BULLET_SPRITE = CRAFTPIX / "5 Bullets" / "4_1.png"
 BOLA_SPRITE = PROJECT_ROOT / "Assests" / "bola branca.png"
 
+PLAYER_FRAME_SIZE = 48
 PLAYER_SCALE = 2
-BULLET_SCALE = 1.5

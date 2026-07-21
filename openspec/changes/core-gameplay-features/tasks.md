@@ -30,3 +30,10 @@
 - [x] 5.2 Enter game over at 0 lives; enter won when no balls remain
 - [x] 5.3 Restart with R from won/game over (no level progression)
 - [x] 5.4 Manual smoke test: move, shoot, split, die, win, restart
+
+## 6. Delta: spritesheet cut + laser
+
+- [x] 6.1 Slice Cyborg Idle/Run strips into 48×48 frames before scale/animation
+- [x] 6.2 Replace point bullet with growing upward laser (stretch/scale Craftpix bullet)
+- [x] 6.3 Keep max active lasers (default 2); remove laser on ball hit or ceiling
+- [x] 6.4 Smoke test: single character, visible laser, split, die, win, restart

@@ -7,10 +7,10 @@
 
 ## 2. Player controls (cyberpunk-ready)
 
-- [ ] 2.1 Fix sprite load pipeline (cut → blit → scale; rect from image)
-- [ ] 2.2 Point player assets at Craftpix Cyborg Idle/Run frames
-- [ ] 2.3 Idle vs run animation + horizontal flip on A/D
-- [ ] 2.4 Space to request fire (respect bullet cap from combat module)
+- [x] 2.1 Fix sprite load pipeline (cut → blit → scale; rect from image)
+- [x] 2.2 Point player assets at Craftpix Cyborg Idle/Run frames
+- [x] 2.3 Idle vs run animation + horizontal flip on A/D
+- [x] 2.4 Space to request fire (respect bullet cap from combat module)
 
 ## 3. Projectile combat
 

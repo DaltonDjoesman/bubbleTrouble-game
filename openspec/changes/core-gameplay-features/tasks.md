@@ -20,9 +20,9 @@
 
 ## 4. Ball system
 
-- [ ] 4.1 Parametrize ball sizes / bounce impulse (replace single magic `-13` where needed)
-- [ ] 4.2 Implement split: non-smallest → two smaller with opposite `vel_x`; smallest → remove
-- [ ] 4.3 Spawn initial arena balls at largest (or mixed) size for a playable match
+- [x] 4.1 Parametrize ball sizes / bounce impulse (replace single magic `-13` where needed)
+- [x] 4.2 Implement split: non-smallest → two smaller with opposite `vel_x`; smallest → remove
+- [x] 4.3 Spawn initial arena balls at largest (or mixed) size for a playable match
 
 ## 5. Match rules
 

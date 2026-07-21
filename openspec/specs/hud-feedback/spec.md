@@ -5,11 +5,11 @@ On-screen HUD for lives and clear win / game over messaging with restart guidanc
 ## Requirements
 
 ### Requirement: Lives display
-While playing, the HUD SHALL show the current remaining lives.
+While playing, the HUD SHALL show the current remaining lives **using life sprites** (not only a numeric text label).
 
-#### Scenario: Lives visible
+#### Scenario: Lives visible as sprites
 - **WHEN** the match is in the playing state
-- **THEN** the current life count is visible on screen
+- **THEN** remaining lives are represented by visible life sprites on screen
 
 ### Requirement: End-state messaging
 Win and game over states SHALL show clear on-screen text including how to restart.

@@ -1,50 +1,77 @@
+from __future__ import annotations
+
+from pathlib import Path
+
 import pygame
-from consts import *
+
+from consts import (
+    PLAYER_IDLE_FRAMES,
+    PLAYER_RUN_FRAMES,
+    PLAYER_SCALE,
+    screenWidth,
+)
+
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self,x, y):
+    def __init__(self, x: int, y: int) -> None:
         super().__init__()
-        self.runSprites = self.get_sprites(runSprites, 120, 80)
-        self.image = self.runSprites[0]
-        self.rect = pygame.Rect(0, 0 , 120, 80)
-        self.rect.center = (x, y)
+        self.idle_sprites = self._load_frame_list(PLAYER_IDLE_FRAMES)
+        self.run_sprites = self._load_frame_list(PLAYER_RUN_FRAMES)
+        self.facing_right = True
+        self.index = 0.0
+        self.index_speed = 0.12
         self.vel_x = 8
-        self.index = 0
-        self.indexSpeed = 0.15
+        self.image = self.idle_sprites[0]
+        self.rect = self.image.get_rect(center=(x, y))
 
-    def animation(self):
-        if self.index >= len(self.runSprites):
-            self.index = 0
-        self.image = self.runSprites[int(self.index)]
-        self.index += self.indexSpeed
-        
-    def update(self):
+    @staticmethod
+    def _load_frame_list(paths: list[Path]) -> list[pygame.Surface]:
+        frames: list[pygame.Surface] = []
+        for path in paths:
+            surface = pygame.image.load(path).convert_alpha()
+            # cut (full frame) → blit onto transparent surface → scale
+            w, h = surface.get_size()
+            cut = pygame.Surface((w, h), flags=pygame.SRCALPHA)
+            cut.blit(surface, (0, 0), pygame.Rect(0, 0, w, h))
+            scaled = pygame.transform.scale(
+                cut, (int(w * PLAYER_SCALE), int(h * PLAYER_SCALE))
+            )
+            frames.append(scaled)
+        return frames
+
+    def _current_frames(self, moving: bool) -> list[pygame.Surface]:
+        return self.run_sprites if moving else self.idle_sprites
+
+    def _animate(self, moving: bool) -> None:
+        frames = self._current_frames(moving)
+        if self.index >= len(frames):
+            self.index = 0.0
+        frame = frames[int(self.index)]
+        if not self.facing_right:
+            frame = pygame.transform.flip(frame, True, False)
+        center = self.rect.center
+        self.image = frame
+        self.rect = self.image.get_rect(center=center)
+        self.index += self.index_speed
+
+    def update(self) -> None:
         dx = 0
-        key = pygame.key.get_pressed()
-        if key[pygame.K_d] == True:
+        keys = pygame.key.get_pressed()
+        moving = False
+
+        if keys[pygame.K_d]:
             dx += self.vel_x
-        elif key[pygame.K_a] == True:
+            self.facing_right = True
+            moving = True
+        elif keys[pygame.K_a]:
             dx -= self.vel_x
+            self.facing_right = False
+            moving = True
 
         if self.rect.left + dx < 0 or self.rect.right + dx > screenWidth:
             dx = 0
-        
-        
-        self.rect.x += dx  
-        self.animation()
-    
-    def get_sprites(self, path, size_x, size_y):
-        surface = pygame.image.load(path)
-        tile_amount_x = int(surface.get_size()[0]/size_x)
-        tile_amount_y = 1
-        sprites = []
 
-        for row in range(tile_amount_y):
-            for col in range(tile_amount_x):
-                x = col*size_x
-                y = row*size_y
-                new_surf = pygame.transform.scale(pygame.Surface((size_x, size_y), flags = pygame.SRCALPHA), (120*4, 80*4))
-                new_surf.blit(surface, (0,0), pygame.Rect(x,y, size_x, size_y))
-                sprites.append(new_surf)
-        return sprites
-        
+        self.rect.x += dx
+        if not moving:
+            self.index = 0.0
+        self._animate(moving)

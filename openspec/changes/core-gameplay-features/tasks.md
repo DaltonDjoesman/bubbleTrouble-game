@@ -1,9 +1,9 @@
 ## 1. Runtime foundation
 
-- [ ] 1.1 Add `requirements.txt` with pygame and ensure `pygame.init()` runs before display creation
-- [ ] 1.2 Resolve asset paths from project root (`pathlib`) in `consts` / loaders
-- [ ] 1.3 Keep `Scripts/main.py` as sole entry; move or quarantine `boubble_trouble.py` and `teste.py` as legacy
-- [ ] 1.4 Wire sprite groups for player, balls, and bullets in `Game`
+- [x] 1.1 Add `requirements.txt` with pygame and ensure `pygame.init()` runs before display creation
+- [x] 1.2 Resolve asset paths from project root (`pathlib`) in `consts` / loaders
+- [x] 1.3 Keep `Scripts/main.py` as sole entry; move or quarantine `boubble_trouble.py` and `teste.py` as legacy
+- [x] 1.4 Wire sprite groups for player, balls, and bullets in `Game`
 
 ## 2. Player controls (cyberpunk-ready)
 

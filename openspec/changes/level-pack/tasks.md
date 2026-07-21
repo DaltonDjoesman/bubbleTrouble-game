@@ -1,7 +1,7 @@
 ## 1. Level data and loader
 
-- [ ] 1.1 Define level schema (balls, platforms, obstacles) and loader API
-- [ ] 1.2 Author 5 levels with increasing difficulty and distinct layouts
+- [x] 1.1 Define level schema (balls, platforms, obstacles) and loader API
+- [x] 1.2 Author 5 levels with increasing difficulty and distinct layouts
 
 ## 2. Arena geometry collisions
 

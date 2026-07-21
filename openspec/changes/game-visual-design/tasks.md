@@ -19,5 +19,5 @@
 
 ## 4. Cleanup check
 
-- [ ] 4.1 Confirm Knight sheets are unused at runtime (leave files; no dead imports)
-- [ ] 4.2 Manual visual smoke test alongside core gameplay loop
+- [x] 4.1 Confirm Knight sheets are unused at runtime (leave files; no dead imports)
+- [x] 4.2 Manual visual smoke test alongside core gameplay loop

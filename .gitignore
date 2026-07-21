@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+.env.*
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Cursor (local skills/rules — not committed)
+.cursor/
+
+# Archives (extracted assets stay tracked)
+*.zip
+
+# Source art packs (large); runtime PNGs remain tracked
+**/PSD/

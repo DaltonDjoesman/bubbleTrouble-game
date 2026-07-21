@@ -26,7 +26,7 @@
 
 ## 5. Match rules
 
-- [ ] 5.1 Track lives (default 3); player–ball collision reduces life with i-frames/reset
-- [ ] 5.2 Enter game over at 0 lives; enter won when no balls remain
-- [ ] 5.3 Restart with R from won/game over (no level progression)
-- [ ] 5.4 Manual smoke test: move, shoot, split, die, win, restart
+- [x] 5.1 Track lives (default 3); player–ball collision reduces life with i-frames/reset
+- [x] 5.2 Enter game over at 0 lives; enter won when no balls remain
+- [x] 5.3 Restart with R from won/game over (no level progression)
+- [x] 5.4 Manual smoke test: move, shoot, split, die, win, restart

@@ -37,6 +37,7 @@ CRAFTPIX = (
 )
 
 CYBORG_DIR = CRAFTPIX / "1 Characters" / "3 Cyborg"
+GUNS_DIR = CRAFTPIX / "2 Guns"
 BULLETS_DIR = CRAFTPIX / "5 Bullets"
 SHOOT_EFFECTS_DIR = CRAFTPIX / "4 Shoot_effects"
 
@@ -54,8 +55,10 @@ PLAYER_JUMP_FRAMES = [
     CYBORG_DIR / "Jump2.png",
 ]
 
+# Compact pistol (set 4) — small upward hold that doesn't cover the body
+GUN_SPRITE = GUNS_DIR / "4_1.png"
 BULLET_SPRITE = BULLETS_DIR / "4_1.png"
-# Brief muzzle flash pair (Craftpix shoot effect set 4)
+# Shoot-effect strips are 48×48 cells — load via strip cutter, not whole PNG
 SHOOT_EFFECT_FRAMES = [
     SHOOT_EFFECTS_DIR / "4_1.png",
     SHOOT_EFFECTS_DIR / "4_2.png",
@@ -67,6 +70,10 @@ PLAYER_FRAME_SIZE = 48
 PLAYER_SCALE = SPRITE_SCALE  # alias — documented scale lives in assets.SPRITE_SCALE
 # Shrink opaque bounds a bit so collisions feel fair vs transparent padding
 PLAYER_HITBOX_INSET = 0.15
+GUN_SCALE = 2  # same pixel scale as the Cyborg frames
+# Hand height as fraction of body opaque box (0 = head, 1 = feet)
+GUN_HAND_Y_FRAC = 0.48
 
-SHOOT_EFFECT_MS = 120
-SHOOT_EFFECT_SCALE = 2
+SHOOT_EFFECT_MS = 100
+# Effects are strip cells; keep small (1× after crop) so muzzle flash ≠ whole sheet
+SHOOT_EFFECT_SCALE = 1

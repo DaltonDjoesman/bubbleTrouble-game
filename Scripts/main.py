@@ -120,9 +120,10 @@ class Game:
         p = self.player.sprite
         if p is None:
             return
-        # Laser grows upward from the player's top (classic vertical beam)
-        self.bullets.add(Bullet(p.rect.centerx, p.rect.top))
-        self.effects.add(ShootEffect(p.rect.centerx, p.rect.top))
+        # Laser + flash spawn from the upward gun muzzle
+        mx, my = p.muzzle
+        self.bullets.add(Bullet(mx, my))
+        self.effects.add(ShootEffect(mx, my))
         self.fire_cooldown_until = now + BULLET_COOLDOWN_MS
 
     def _handle_bullet_ball_hits(self) -> None:

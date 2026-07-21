@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal
 import pygame
 
 from consts import VOLUME_MAX, screenHeight, screenWidth
+from levels import DEFAULT_LEVEL, MAX_LEVEL, get_level
 
 if TYPE_CHECKING:
     from audio import AudioManager
@@ -25,9 +26,6 @@ _CARD_W = 360
 _CARD_H = 48
 _CARD_GAP = 12
 
-# Until level-pack ships more content, only level 1 exists.
-DEFAULT_LEVEL = 1
-MAX_LEVEL = 1
 MODES = ("1P", "2P")
 
 Screen = Literal["root", "options"]
@@ -213,7 +211,8 @@ class MainMenu:
                 if kind == "mode":
                     name, value = "Mode", self.mode
                 elif kind == "level":
-                    name, value = "Level", f"{self.level}/{self.max_level}"
+                    lvl = get_level(self.level)
+                    name, value = "Level", f"{self.level}·{lvl.name}"
                 elif kind == "music":
                     name = "Music"
                     value = f"{self.audio.music_volume if self.audio else 0}/{VOLUME_MAX}"

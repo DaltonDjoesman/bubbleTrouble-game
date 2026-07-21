@@ -1,8 +1,8 @@
 ## 1. Acquire audio assets
 
-- [ ] 1.1 Create `audio/music` and `audio/sfx` folders
-- [ ] 1.2 Obtain permissive-license BGM + SFX (shoot, pop, hit, win, lose, UI); add credit notes
-- [ ] 1.3 Prefer OGG/WAV compatible with pygame.mixer
+- [x] 1.1 Create `audio/music` and `audio/sfx` folders
+- [x] 1.2 Obtain permissive-license BGM + SFX (shoot, pop, hit, win, lose, UI); add credit notes
+- [x] 1.3 Prefer OGG/WAV compatible with pygame.mixer
 
 ## 2. Audio manager
 

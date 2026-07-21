@@ -1,7 +1,7 @@
 ## 1. App flow states
 
-- [ ] 1.1 Introduce app states `menu` / `playing` / `won` / `game_over` and boot into `menu`
-- [ ] 1.2 Branch the main loop so menu and match update/draw separately
+- [x] 1.1 Introduce app states `menu` / `playing` / `won` / `game_over` and boot into `menu`
+- [x] 1.2 Branch the main loop so menu and match update/draw separately
 
 ## 2. Main menu UI
 

@@ -25,7 +25,7 @@ from consts import (
     DEFAULT_LIVES,
     FPS,
     IFRAME_MS,
-    LIFE_HEART_SPRITE,
+    LIFE_BAR_SPRITES,
     LIFE_HUD_SCALE,
     MAX_BULLETS,
     screenHeight,
@@ -73,7 +73,10 @@ class Game:
         self.font = pygame.font.Font(None, 36)
         self.big_font = pygame.font.Font(None, 64)
         self.background = _build_arena_background()
-        self._life_icon = load_image(LIFE_HEART_SPRITE, scale=LIFE_HUD_SCALE)
+        self._life_bars = {
+            n: load_image(path, scale=LIFE_HUD_SCALE, colorkey=(255, 255, 255), crop=True)
+            for n, path in LIFE_BAR_SPRITES.items()
+        }
 
         self.bolas = pygame.sprite.Group()
         self.player = pygame.sprite.GroupSingle()
@@ -165,17 +168,14 @@ class Game:
             self.state = "won"
 
     def _draw_hud(self) -> None:
-        # One heart icon per remaining life (top-left); none at 0 / game over
-        icon = self._life_icon
-        gap = 4
-        x, y = 10, 10
-        for i in range(self.lives):
-            ix = x + i * (icon.get_width() + gap)
-            # Drop shadow for contrast on the cyberpunk gradient
-            shadow = icon.copy()
+        # Capsule life bar for remaining lives; hidden at 0 / game over
+        bar = self._life_bars.get(self.lives)
+        if bar is not None:
+            x, y = 10, 10
+            shadow = bar.copy()
             shadow.fill((0, 0, 0, 180), special_flags=pygame.BLEND_RGBA_MULT)
-            self.screen.blit(shadow, (ix + 2, y + 2))
-            self.screen.blit(icon, (ix, y))
+            self.screen.blit(shadow, (x + 2, y + 2))
+            self.screen.blit(bar, (x, y))
 
         if self.state in ("won", "game_over"):
             dim = pygame.Surface((screenWidth, screenHeight), flags=pygame.SRCALPHA)

@@ -66,10 +66,14 @@ SHOOT_EFFECT_FRAMES = [
 
 BOLA_SPRITE = PROJECT_ROOT / "Assests" / "bola branca.png"
 
-# Life HUD icons (Heart.png is 97×87; half scale keeps a clear top bar)
+# Life HUD: capsule bars (cleaner edges than Heart.png white matte)
 LIFE_DIR = PROJECT_ROOT / "sprites" / "Life"
-LIFE_HEART_SPRITE = LIFE_DIR / "Heart.png"
-LIFE_HUD_SCALE = 0.5
+LIFE_BAR_SPRITES = {
+    3: LIFE_DIR / "life1.png",  # full
+    2: LIFE_DIR / "life2.png",  # ~2/3
+    1: LIFE_DIR / "life4.png",  # ~1/3
+}
+LIFE_HUD_SCALE = 0.42  # life*.png are 301×53
 
 PLAYER_FRAME_SIZE = 48
 PLAYER_SCALE = SPRITE_SCALE  # alias — documented scale lives in assets.SPRITE_SCALE

@@ -19,12 +19,24 @@ DEFAULT_CELL = 48
 _cache: dict[tuple, pygame.Surface] = {}
 
 
-def load_image(path: Path, *, scale: float | None = None) -> pygame.Surface:
-    """Load a PNG with convert_alpha; optional uniform scale. Cached by path+scale."""
-    key = (str(path.resolve()), scale)
+def load_image(
+    path: Path,
+    *,
+    scale: float | None = None,
+    colorkey: tuple[int, int, int] | None = None,
+    crop: bool = False,
+) -> pygame.Surface:
+    """Load a PNG with convert_alpha; optional colorkey, crop, and uniform scale."""
+    key = (str(path.resolve()), scale, colorkey, crop)
     if key in _cache:
         return _cache[key].copy()
     surface = pygame.image.load(str(path)).convert_alpha()
+    if colorkey is not None:
+        surface = _key_out_color(surface, colorkey)
+    if crop:
+        bounds = surface.get_bounding_rect()
+        if bounds.width > 0 and bounds.height > 0:
+            surface = surface.subsurface(bounds).copy()
     if scale is not None and scale != 1:
         w, h = surface.get_size()
         surface = pygame.transform.scale(
@@ -32,6 +44,28 @@ def load_image(path: Path, *, scale: float | None = None) -> pygame.Surface:
         )
     _cache[key] = surface
     return surface.copy()
+
+
+def _key_out_color(
+    surface: pygame.Surface,
+    color: tuple[int, int, int],
+    *,
+    threshold: int = 12,
+) -> pygame.Surface:
+    """Set near-matching RGB pixels fully transparent (keeps true alpha art)."""
+    out = surface.copy()
+    tr, tg, tb = color
+    w, h = out.get_size()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, _a = out.get_at((x, y))
+            if (
+                abs(r - tr) <= threshold
+                and abs(g - tg) <= threshold
+                and abs(b - tb) <= threshold
+            ):
+                out.set_at((x, y), (0, 0, 0, 0))
+    return out
 
 
 def cut_strip(

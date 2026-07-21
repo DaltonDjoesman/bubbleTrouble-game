@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pygame
 
+from assets import load_image
 from consts import BULLET_SPRITE, LASER_GROW_SPEED, LASER_WIDTH
 
 
@@ -10,7 +11,7 @@ class Bullet(pygame.sprite.Sprite):
 
     def __init__(self, x: int, base_y: int) -> None:
         super().__init__()
-        tip = pygame.image.load(BULLET_SPRITE).convert_alpha()
+        tip = load_image(BULLET_SPRITE)
         tw, th = tip.get_size()
         # Narrow tip used at the leading edge; beam is stretched below it
         tip_w = LASER_WIDTH
@@ -34,6 +35,7 @@ class Bullet(pygame.sprite.Sprite):
             image.blit(body, (0, self._tip.get_height()))
         image.blit(self._tip, (0, 0))
         self.image = image
+        # Collision rect derived from the scaled/composited laser surface
         self.rect = self.image.get_rect(midbottom=(self.x, self.base_y))
 
     def update(self) -> None:

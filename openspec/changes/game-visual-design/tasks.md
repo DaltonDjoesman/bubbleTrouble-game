@@ -1,8 +1,8 @@
 ## 1. Sprite pipeline
 
-- [ ] 1.1 Add asset loader helper for folder frame lists + documented scale factor
-- [ ] 1.2 Ensure player/bullet rects derive from scaled images
-- [ ] 1.3 Centralize Craftpix paths in consts (Cyborg, bullets, shoot effects)
+- [x] 1.1 Add asset loader helper for folder frame lists + documented scale factor
+- [x] 1.2 Ensure player/bullet rects derive from scaled images
+- [x] 1.3 Centralize Craftpix paths in consts (Cyborg, bullets, shoot effects)
 
 ## 2. Cyberpunk presentation
 

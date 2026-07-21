@@ -14,7 +14,7 @@
 
 ## 3. Projectile combat
 
-- [ ] 3.1 Create `bullet.py` using a Craftpix bullet sprite; upward motion; despawn off top
+- [x] 3.1 Create `bullet.py` using a Craftpix bullet sprite; upward motion; despawn off top
 - [ ] 3.2 Enforce max active bullets (default 2) and optional short cooldown
 - [ ] 3.3 Detect bullet–ball collisions and remove bullet on hit
 

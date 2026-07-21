@@ -5,9 +5,9 @@
 
 ## 2. Main menu UI
 
-- [ ] 2.1 Create menu module with Play, Quit, mode (1P/2P), and level select fields
-- [ ] 2.2 Keyboard navigate + confirm; Quit exits the app
-- [ ] 2.3 Persist selection into `Game` (`selected_mode`, `selected_level`)
+- [x] 2.1 Create menu module with Play, Quit, mode (1P/2P), and level select fields
+- [x] 2.2 Keyboard navigate + confirm; Quit exits the app
+- [x] 2.3 Persist selection into `Game` (`selected_mode`, `selected_level`)
 
 ## 3. Match entry/exit
 

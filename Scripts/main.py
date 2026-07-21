@@ -33,7 +33,7 @@ from consts import (
     screenHeight,
     screenWidth,
 )
-from menu import MainMenu
+from menu import DEFAULT_LEVEL, MAX_LEVEL, MainMenu
 from player import Player
 from shoot_effect import ShootEffect
 
@@ -84,7 +84,16 @@ class Game:
         }
 
         self.audio = init_audio()
-        self.menu = MainMenu(self.font, self.big_font, self.audio)
+        self.selected_mode = "1P"
+        self.selected_level = DEFAULT_LEVEL
+        self.menu = MainMenu(
+            self.font,
+            self.big_font,
+            self.audio,
+            mode=self.selected_mode,
+            level=self.selected_level,
+            max_level=MAX_LEVEL,
+        )
 
         self.bolas = pygame.sprite.Group()
         self.player = pygame.sprite.GroupSingle()
@@ -96,11 +105,30 @@ class Game:
         self.iframe_until = 0
         self.fire_cooldown_until = 0
         self._end_sfx_played = False
+        self._notice: str | None = None
+        self._notice_until = 0
 
         self._ball_base_image = pygame.image.load(BOLA_SPRITE).convert_alpha()
         self.audio.play_music()
 
-    def reset_match(self) -> None:
+    def _sync_selection_from_menu(self) -> None:
+        self.selected_mode = self.menu.mode
+        self.selected_level = self.menu.level
+
+    def _show_notice(self, text: str, duration_ms: int = 2200) -> None:
+        self._notice = text
+        self._notice_until = pygame.time.get_ticks() + duration_ms
+
+    def reset_match(
+        self,
+        mode: str | None = None,
+        level_id: int | None = None,
+    ) -> None:
+        if mode is not None:
+            self.selected_mode = mode if mode in ("1P", "2P") else "1P"
+        if level_id is not None:
+            self.selected_level = max(1, min(level_id, MAX_LEVEL))
+
         self.bolas.empty()
         self.bullets.empty()
         self.effects.empty()
@@ -111,8 +139,13 @@ class Game:
         self.state = "playing"
         self._end_sfx_played = False
 
+        # local-coop not shipped yet: 2P selection is stored but match is 1P.
+        if self.selected_mode == "2P":
+            self._show_notice("2P soon — starting 1P")
+
         self.player.add(Player(screenWidth // 2, screenHeight - 4))
-        # Playable arena: one large + one medium ball
+        # Level pack absent: always spawn the default arena (level 1 layout).
+        _ = self.selected_level
         self.bolas.add(
             Ball(self._ball_base_image, "L", screenWidth // 3, screenHeight // 3, (2, 0))
         )
@@ -223,7 +256,19 @@ class Game:
         self.effects.empty()
         self.player.empty()
         self._end_sfx_played = False
+        self._notice = None
+        self.menu.mode = self.selected_mode
+        self.menu.level = self.selected_level
         self.audio.play_music()
+
+    def _draw_notice(self, now: int) -> None:
+        if self._notice is None or now >= self._notice_until:
+            self._notice = None
+            return
+        hint = self.font.render(self._notice, True, _NEON_CYAN)
+        self.screen.blit(
+            hint, hint.get_rect(center=(screenWidth // 2, screenHeight - 48))
+        )
 
     def runGame(self) -> None:
         run = True
@@ -240,11 +285,18 @@ class Game:
                         if result.quit_app:
                             run = False
                         elif result.start_game:
-                            self.reset_match()
+                            self._sync_selection_from_menu()
+                            self.reset_match(
+                                mode=self.selected_mode,
+                                level_id=self.selected_level,
+                            )
                     elif event.key == pygame.K_SPACE and self.state == "playing":
                         self._try_fire()
                     elif event.key == pygame.K_r and self.state in ("won", "game_over"):
-                        self.reset_match()
+                        self.reset_match(
+                            mode=self.selected_mode,
+                            level_id=self.selected_level,
+                        )
                     elif event.key == pygame.K_m and self.state in ("won", "game_over"):
                         self._go_menu()
                     elif event.key == pygame.K_ESCAPE and self.state in (
@@ -283,6 +335,7 @@ class Game:
                         self.player.draw(self.screen)
 
                 self._draw_hud()
+                self._draw_notice(now)
 
             pygame.display.update()
 

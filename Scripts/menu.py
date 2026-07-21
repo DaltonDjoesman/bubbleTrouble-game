@@ -1,4 +1,4 @@
-"""Minimal main menu with audio volume controls."""
+"""Main menu: Play/Quit, mode, level, and audio volume controls."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,6 +25,11 @@ _CARD_W = 360
 _CARD_H = 48
 _CARD_GAP = 12
 
+# Until level-pack ships more content, only level 1 exists.
+DEFAULT_LEVEL = 1
+MAX_LEVEL = 1
+MODES = ("1P", "2P")
+
 
 @dataclass
 class MenuAction:
@@ -35,24 +40,33 @@ class MenuAction:
 
 
 class MainMenu:
-    """Keyboard menu: Play, Music vol, SFX vol, Quit."""
+    """Keyboard menu: Play, Mode, Level, Music vol, SFX vol, Quit."""
 
     def __init__(
         self,
         font: pygame.font.Font,
         big_font: pygame.font.Font,
         audio: AudioManager | None,
+        *,
+        mode: str = "1P",
+        level: int = DEFAULT_LEVEL,
+        max_level: int = MAX_LEVEL,
     ) -> None:
         self.font = font
         self.big_font = big_font
         self.audio = audio
         self.selected = 0
+        self.mode = mode if mode in MODES else "1P"
+        self.max_level = max(1, max_level)
+        self.level = max(1, min(level, self.max_level))
 
     def _items(self) -> list[tuple[str, str]]:
         music = self.audio.music_volume if self.audio else 0
         sfx = self.audio.sfx_volume if self.audio else 0
         return [
             ("play", "Play"),
+            ("mode", f"Mode    {self.mode}"),
+            ("level", f"Level   {self.level}/{self.max_level}"),
             ("music", f"Music   {music}/{VOLUME_MAX}"),
             ("sfx", f"SFX     {sfx}/{VOLUME_MAX}"),
             ("quit", "Quit"),
@@ -70,9 +84,9 @@ class MainMenu:
             self.selected = (self.selected + 1) % n
             self._sfx("ui_select")
         elif key in (pygame.K_LEFT, pygame.K_a):
-            self._adjust_volume(-1)
+            self._nudge_field(-1)
         elif key in (pygame.K_RIGHT, pygame.K_d):
-            self._adjust_volume(+1)
+            self._nudge_field(+1)
         elif key in (pygame.K_RETURN, pygame.K_SPACE):
             kind = items[self.selected][0]
             if kind == "play":
@@ -81,9 +95,21 @@ class MainMenu:
             elif kind == "quit":
                 self._sfx("ui_confirm")
                 action.quit_app = True
-            elif kind in ("music", "sfx"):
-                self._adjust_volume(+1)
+            elif kind in ("mode", "level", "music", "sfx"):
+                self._nudge_field(+1)
         return action
+
+    def _nudge_field(self, delta: int) -> None:
+        kind = self._items()[self.selected][0]
+        if kind == "mode":
+            idx = MODES.index(self.mode)
+            self.mode = MODES[(idx + delta) % len(MODES)]
+            self._sfx("ui_select")
+        elif kind == "level":
+            self.level = ((self.level - 1 + delta) % self.max_level) + 1
+            self._sfx("ui_select")
+        elif kind in ("music", "sfx"):
+            self._adjust_volume(delta)
 
     def _adjust_volume(self, delta: int) -> None:
         if self.audio is None:
@@ -124,12 +150,12 @@ class MainMenu:
     def draw(self, screen: pygame.Surface) -> None:
         title = self.big_font.render("Bubble Trouble", True, _TITLE)
         screen.blit(
-            title, title.get_rect(center=(screenWidth // 2, screenHeight // 2 - 140))
+            title, title.get_rect(center=(screenWidth // 2, screenHeight // 2 - 170))
         )
 
         items = self._items()
         total_h = len(items) * _CARD_H + (len(items) - 1) * _CARD_GAP
-        start_y = screenHeight // 2 - total_h // 2 + 20
+        start_y = screenHeight // 2 - total_h // 2 + 10
         cx = screenWidth // 2
 
         for i, (kind, label) in enumerate(items):
@@ -137,7 +163,6 @@ class MainMenu:
             card_rect = pygame.Rect(0, 0, _CARD_W, _CARD_H)
             card_rect.center = (cx, start_y + i * (_CARD_H + _CARD_GAP) + _CARD_H // 2)
 
-            # Card body
             card = pygame.Surface((_CARD_W, _CARD_H), flags=pygame.SRCALPHA)
             card.fill(_CARD_BG)
             screen.blit(card, card_rect.topleft)
@@ -149,13 +174,18 @@ class MainMenu:
 
             text_color = _SELECTED if selected else _HUD_DIM
 
-            if kind in ("music", "sfx"):
-                name = "Music" if kind == "music" else "SFX"
-                value = (
-                    f"{self.audio.music_volume if self.audio else 0}/{VOLUME_MAX}"
-                    if kind == "music"
-                    else f"{self.audio.sfx_volume if self.audio else 0}/{VOLUME_MAX}"
-                )
+            if kind in ("mode", "level", "music", "sfx"):
+                if kind == "mode":
+                    name, value = "Mode", self.mode
+                elif kind == "level":
+                    name, value = "Level", f"{self.level}/{self.max_level}"
+                elif kind == "music":
+                    name = "Music"
+                    value = f"{self.audio.music_volume if self.audio else 0}/{VOLUME_MAX}"
+                else:
+                    name = "SFX"
+                    value = f"{self.audio.sfx_volume if self.audio else 0}/{VOLUME_MAX}"
+
                 name_surf = self.font.render(name, True, text_color)
                 val_surf = self.font.render(value, True, text_color)
                 name_rect = name_surf.get_rect(midleft=(card_rect.left + 28, card_rect.centery))
@@ -177,13 +207,12 @@ class MainMenu:
     def _draw_hints(self, screen: pygame.Surface) -> None:
         """Footer: clear control legend with drawn arrows."""
         y = screenHeight - 40
-        # (kind, payload) — icon blocks or text labels
         parts: list[tuple[str, str | None]] = [
             ("nav", None),
             ("text", "mover"),
             ("sep", None),
             ("vol", None),
-            ("text", "volume"),
+            ("text", "ajustar"),
             ("sep", None),
             ("text", "Enter"),
             ("text_dim", "confirmar"),

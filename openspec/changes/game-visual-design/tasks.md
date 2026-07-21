@@ -13,9 +13,9 @@
 
 ## 3. HUD feedback
 
-- [ ] 3.1 Draw lives on screen during play
-- [ ] 3.2 Win and game over overlays with restart hint
-- [ ] 3.3 Visual pass: readable contrast, no overlapping critical sprites
+- [x] 3.1 Draw lives on screen during play
+- [x] 3.2 Win and game over overlays with restart hint
+- [x] 3.3 Visual pass: readable contrast, no overlapping critical sprites
 
 ## 4. Cleanup check
 

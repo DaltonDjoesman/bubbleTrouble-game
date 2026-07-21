@@ -29,6 +29,13 @@ From won or game over, the player SHALL be able to restart a fresh match with a 
 - **WHEN** the match is won or over and the player presses the restart key (R)
 - **THEN** lives and balls reset to the initial arena setup and play resumes
 
+### Requirement: Return to menu after match
+From won or game over, the player SHALL be able to return to the main menu (in addition to any retry control).
+
+#### Scenario: Back to menu
+- **WHEN** the match is won or over and the player presses the menu-return key
+- **THEN** the main menu is shown
+
 ### Requirement: No level progression in MVP
 The match SHALL NOT advance through multiple authored levels in this capability.
 

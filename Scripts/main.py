@@ -259,6 +259,8 @@ class Game:
         self._notice = None
         self.menu.mode = self.selected_mode
         self.menu.level = self.selected_level
+        self.menu.screen = "root"
+        self.menu.selected = 0
         self.audio.play_music()
 
     def _draw_notice(self, now: int) -> None:

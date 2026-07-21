@@ -1,8 +1,8 @@
-"""Main menu: Play/Quit, mode, level, and audio volume controls."""
+"""Main menu: Play/Quit, mode, level; audio in Options submenu."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pygame
 
@@ -30,6 +30,8 @@ DEFAULT_LEVEL = 1
 MAX_LEVEL = 1
 MODES = ("1P", "2P")
 
+Screen = Literal["root", "options"]
+
 
 @dataclass
 class MenuAction:
@@ -40,7 +42,7 @@ class MenuAction:
 
 
 class MainMenu:
-    """Keyboard menu: Play, Mode, Level, Music vol, SFX vol, Quit."""
+    """Root: Play / Mode / Level / Options / Quit. Options: Music / SFX / Back."""
 
     def __init__(
         self,
@@ -55,27 +57,50 @@ class MainMenu:
         self.font = font
         self.big_font = big_font
         self.audio = audio
+        self.screen: Screen = "root"
         self.selected = 0
+        self._root_selected = 0
         self.mode = mode if mode in MODES else "1P"
         self.max_level = max(1, max_level)
         self.level = max(1, min(level, self.max_level))
 
     def _items(self) -> list[tuple[str, str]]:
-        music = self.audio.music_volume if self.audio else 0
-        sfx = self.audio.sfx_volume if self.audio else 0
+        if self.screen == "options":
+            music = self.audio.music_volume if self.audio else 0
+            sfx = self.audio.sfx_volume if self.audio else 0
+            return [
+                ("music", f"Music   {music}/{VOLUME_MAX}"),
+                ("sfx", f"SFX     {sfx}/{VOLUME_MAX}"),
+                ("back", "Back"),
+            ]
         return [
             ("play", "Play"),
             ("mode", f"Mode    {self.mode}"),
             ("level", f"Level   {self.level}/{self.max_level}"),
-            ("music", f"Music   {music}/{VOLUME_MAX}"),
-            ("sfx", f"SFX     {sfx}/{VOLUME_MAX}"),
+            ("options", "Options"),
             ("quit", "Quit"),
         ]
+
+    def _enter_options(self) -> None:
+        self._root_selected = self.selected
+        self.screen = "options"
+        self.selected = 0
+        self._sfx("ui_confirm")
+
+    def _leave_options(self) -> None:
+        self.screen = "root"
+        self.selected = self._root_selected
+        self._sfx("ui_select")
 
     def handle_keydown(self, key: int) -> MenuAction:
         items = self._items()
         n = len(items)
         action = MenuAction()
+
+        if key == pygame.K_ESCAPE:
+            if self.screen == "options":
+                self._leave_options()
+            return action
 
         if key in (pygame.K_UP, pygame.K_w):
             self.selected = (self.selected - 1) % n
@@ -95,6 +120,10 @@ class MainMenu:
             elif kind == "quit":
                 self._sfx("ui_confirm")
                 action.quit_app = True
+            elif kind == "options":
+                self._enter_options()
+            elif kind == "back":
+                self._leave_options()
             elif kind in ("mode", "level", "music", "sfx"):
                 self._nudge_field(+1)
         return action
@@ -150,12 +179,18 @@ class MainMenu:
     def draw(self, screen: pygame.Surface) -> None:
         title = self.big_font.render("Bubble Trouble", True, _TITLE)
         screen.blit(
-            title, title.get_rect(center=(screenWidth // 2, screenHeight // 2 - 170))
+            title, title.get_rect(center=(screenWidth // 2, screenHeight // 2 - 160))
         )
+        if self.screen == "options":
+            subtitle = self.font.render("Options", True, _NEON_CYAN)
+            screen.blit(
+                subtitle,
+                subtitle.get_rect(center=(screenWidth // 2, screenHeight // 2 - 118)),
+            )
 
         items = self._items()
         total_h = len(items) * _CARD_H + (len(items) - 1) * _CARD_GAP
-        start_y = screenHeight // 2 - total_h // 2 + 10
+        start_y = screenHeight // 2 - total_h // 2 + 20
         cx = screenWidth // 2
 
         for i, (kind, label) in enumerate(items):
@@ -205,7 +240,7 @@ class MainMenu:
         self._draw_hints(screen)
 
     def _draw_hints(self, screen: pygame.Surface) -> None:
-        """Footer: clear control legend with drawn arrows."""
+        """Footer: control legend; Esc appears while in Options."""
         y = screenHeight - 40
         parts: list[tuple[str, str | None]] = [
             ("nav", None),
@@ -217,6 +252,14 @@ class MainMenu:
             ("text", "Enter"),
             ("text_dim", "confirmar"),
         ]
+        if self.screen == "options":
+            parts.extend(
+                [
+                    ("sep", None),
+                    ("text", "Esc"),
+                    ("text_dim", "voltar"),
+                ]
+            )
 
         gap = 8
         widths: list[int] = []

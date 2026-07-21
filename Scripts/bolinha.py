@@ -37,17 +37,42 @@ class Ball(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.vel_x, self.vel_y = float(vel[0]), float(vel[1])
 
-    def update(self) -> None:
+    def update(self, solids: list[pygame.Rect] | None = None) -> None:
+        solids = solids or []
+
         if self.rect.left + self.vel_x <= 0 or self.rect.right + self.vel_x >= screenWidth:
             self.vel_x *= -1
 
         self.rect.x += int(self.vel_x)
+        for solid in solids:
+            if not self.rect.colliderect(solid):
+                continue
+            if self.vel_x > 0:
+                self.rect.right = solid.left
+            else:
+                self.rect.left = solid.right
+            self.vel_x *= -1
+            break
 
         self.vel_y += GRAVITY
-        if self.rect.bottom + self.vel_y > screenHeight:
+        self.rect.y += int(self.vel_y)
+
+        if self.rect.bottom > screenHeight:
+            self.rect.bottom = screenHeight
             self.vel_y = self.bounce_impulse
 
-        self.rect.y += int(self.vel_y)
+        for solid in solids:
+            if not self.rect.colliderect(solid):
+                continue
+            if self.vel_y >= 0:
+                # Land / bounce on top
+                self.rect.bottom = solid.top
+                self.vel_y = self.bounce_impulse
+            else:
+                # Hit underside
+                self.rect.top = solid.bottom
+                self.vel_y = abs(self.vel_y) * 0.35
+            break
 
     def split(self, base_image: pygame.Surface) -> list[Ball]:
         """Resolve a hit: spawn two smaller balls, or nothing if already smallest."""

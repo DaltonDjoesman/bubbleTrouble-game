@@ -33,8 +33,15 @@ from consts import (
     screenHeight,
     screenWidth,
 )
-from menu import DEFAULT_LEVEL, MAX_LEVEL, MainMenu
-from player import Player
+from levels import (
+    DEFAULT_LEVEL,
+    MAX_LEVEL,
+    Level,
+    draw_arena_geometry,
+    get_level,
+)
+from menu import MainMenu
+from player import FLOOR_Y, Player
 from shoot_effect import ShootEffect
 
 logging.basicConfig(level=logging.WARNING)
@@ -46,6 +53,8 @@ _NEON_CYAN = (80, 240, 255)
 _NEON_MAGENTA = (255, 70, 180)
 _HUD_DIM = (180, 200, 220)
 _OVERLAY = (8, 4, 20, 180)
+
+LEVEL_CLEAR_AUTO_MS = 1800
 
 
 def _build_arena_background() -> pygame.Surface:
@@ -107,6 +116,9 @@ class Game:
         self._end_sfx_played = False
         self._notice: str | None = None
         self._notice_until = 0
+        self._level_clear_at = 0
+        self.current_level: Level = get_level(DEFAULT_LEVEL)
+        self._solids: list[pygame.Rect] = []
 
         self._ball_base_image = pygame.image.load(BOLA_SPRITE).convert_alpha()
         self.audio.play_music()
@@ -127,7 +139,7 @@ class Game:
         if mode is not None:
             self.selected_mode = mode if mode in ("1P", "2P") else "1P"
         if level_id is not None:
-            self.selected_level = max(1, min(level_id, MAX_LEVEL))
+            self.selected_level = max(DEFAULT_LEVEL, min(level_id, MAX_LEVEL))
 
         self.bolas.empty()
         self.bullets.empty()
@@ -138,26 +150,34 @@ class Game:
         self.fire_cooldown_until = 0
         self.state = "playing"
         self._end_sfx_played = False
+        self._level_clear_at = 0
 
         # local-coop not shipped yet: 2P selection is stored but match is 1P.
         if self.selected_mode == "2P":
             self._show_notice("2P soon — starting 1P")
 
-        self.player.add(Player(screenWidth // 2, screenHeight - 4))
-        # Level pack absent: always spawn the default arena (level 1 layout).
-        _ = self.selected_level
-        self.bolas.add(
-            Ball(self._ball_base_image, "L", screenWidth // 3, screenHeight // 3, (2, 0))
-        )
-        self.bolas.add(
-            Ball(
-                self._ball_base_image,
-                "M",
-                2 * screenWidth // 3,
-                screenHeight // 4,
-                (-2, 0),
+        self.current_level = get_level(self.selected_level)
+        self._solids = self.current_level.solid_rects()
+        self.player.add(Player(screenWidth // 2, FLOOR_Y))
+        for spawn in self.current_level.balls:
+            self.bolas.add(
+                Ball(
+                    self._ball_base_image,
+                    spawn.tier,
+                    spawn.x,
+                    spawn.y,
+                    spawn.vel,
+                )
             )
-        )
+
+    def _advance_to_next_level(self) -> None:
+        next_id = self.selected_level + 1
+        if next_id > MAX_LEVEL:
+            self.state = "won"
+            return
+        self.selected_level = next_id
+        self.menu.level = next_id
+        self.reset_match(mode=self.selected_mode, level_id=next_id)
 
     def _try_fire(self) -> None:
         if self.state != "playing":
@@ -210,13 +230,19 @@ class Game:
         self.bullets.empty()
 
     def _check_win(self) -> None:
-        if self.state == "playing" and len(self.bolas) == 0:
+        if self.state != "playing" or len(self.bolas) != 0:
+            return
+        if self.selected_level < MAX_LEVEL:
+            self.state = "level_clear"
+            self._level_clear_at = pygame.time.get_ticks()
+            self._end_sfx_played = False
+        else:
             self.state = "won"
 
     def _play_end_sfx_once(self) -> None:
         if self._end_sfx_played:
             return
-        if self.state == "won":
+        if self.state in ("won", "level_clear"):
             self.audio.play_sfx("win")
             self._end_sfx_played = True
         elif self.state == "game_over":
@@ -233,12 +259,34 @@ class Game:
             self.screen.blit(shadow, (x + 2, y + 2))
             self.screen.blit(bar, (x, y))
 
-        if self.state in ("won", "game_over"):
+        # Level label while in a match
+        if self.state in ("playing", "level_clear", "won", "game_over"):
+            label = self.font.render(
+                f"Lv {self.current_level.id}: {self.current_level.name}",
+                True,
+                _HUD_DIM,
+            )
+            self.screen.blit(label, (screenWidth - label.get_width() - 12, 12))
+
+        if self.state in ("won", "game_over", "level_clear"):
             dim = pygame.Surface((screenWidth, screenHeight), flags=pygame.SRCALPHA)
             dim.fill(_OVERLAY)
             self.screen.blit(dim, (0, 0))
 
-        if self.state == "won":
+        if self.state == "level_clear":
+            msg = self.big_font.render("LEVEL CLEAR", True, _NEON_CYAN)
+            hint = self.font.render(
+                f"Enter → Level {self.selected_level + 1} · M menu",
+                True,
+                _HUD_DIM,
+            )
+            self.screen.blit(
+                msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20))
+            )
+            self.screen.blit(
+                hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30))
+            )
+        elif self.state == "won":
             msg = self.big_font.render("YOU WIN", True, _NEON_CYAN)
             hint = self.font.render("R retry · M menu", True, _HUD_DIM)
             self.screen.blit(msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20)))
@@ -294,30 +342,50 @@ class Game:
                             )
                     elif event.key == pygame.K_SPACE and self.state == "playing":
                         self._try_fire()
+                    elif (
+                        event.key in (pygame.K_RETURN, pygame.K_SPACE)
+                        and self.state == "level_clear"
+                    ):
+                        self._advance_to_next_level()
                     elif event.key == pygame.K_r and self.state in ("won", "game_over"):
                         self.reset_match(
                             mode=self.selected_mode,
                             level_id=self.selected_level,
                         )
-                    elif event.key == pygame.K_m and self.state in ("won", "game_over"):
+                    elif event.key == pygame.K_m and self.state in (
+                        "won",
+                        "game_over",
+                        "level_clear",
+                    ):
                         self._go_menu()
                     elif event.key == pygame.K_ESCAPE and self.state in (
                         "won",
                         "game_over",
+                        "level_clear",
                         "playing",
                     ):
                         self._go_menu()
+
+            # Auto-advance after a short beat on mid-campaign clears
+            if (
+                self.state == "level_clear"
+                and self._level_clear_at
+                and now - self._level_clear_at >= LEVEL_CLEAR_AUTO_MS
+            ):
+                self._advance_to_next_level()
 
             self.screen.blit(self.background, (0, 0))
 
             if self.state == "menu":
                 self.menu.draw(self.screen)
             else:
+                draw_arena_geometry(self.screen, self.current_level)
+
                 if self.state == "playing":
-                    self.bolas.update()
-                    self.bullets.update()
+                    self.bolas.update(self._solids)
+                    self.bullets.update(self._solids)
                     self.effects.update()
-                    self.player.update()
+                    self.player.update(self._solids)
                     self._handle_bullet_ball_hits()
                     self._handle_player_ball_hits()
                     self._check_win()

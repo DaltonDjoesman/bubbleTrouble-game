@@ -4,6 +4,7 @@ import pygame
 
 from assets import load_image, load_strip_frames
 from consts import (
+    GRAVITY,
     GUN_HAND_Y_FRAC,
     GUN_SCALE,
     GUN_SPRITE,
@@ -14,6 +15,9 @@ from consts import (
     screenHeight,
     screenWidth,
 )
+
+JUMP_VELOCITY = -11
+FLOOR_Y = screenHeight - 4
 
 
 class Player(pygame.sprite.Sprite):
@@ -28,9 +32,11 @@ class Player(pygame.sprite.Sprite):
         self.index = 0.0
         self.index_speed = 0.15
         self.vel_x = 8
+        self.vel_y = 0.0
+        self.on_ground = True
         self.muzzle = (x, y)
         self.image = self.idle_sprites[0]
-        self.rect = self.image.get_rect(midbottom=(x, min(y, screenHeight - 4)))
+        self.rect = self.image.get_rect(midbottom=(x, min(y, FLOOR_Y)))
         self._compose_with_gun(self.idle_sprites[0])
         self.hitbox = self._compute_hitbox()
 
@@ -91,7 +97,48 @@ class Player(pygame.sprite.Sprite):
         self.hitbox = self._compute_hitbox()
         self.index += self.index_speed
 
-    def update(self) -> None:
+    def _resolve_horizontal(self, solids: list[pygame.Rect]) -> None:
+        for solid in solids:
+            if self.rect.colliderect(solid):
+                if self.rect.centerx < solid.centerx:
+                    self.rect.right = solid.left
+                else:
+                    self.rect.left = solid.right
+
+    def _resolve_vertical(self, solids: list[pygame.Rect]) -> None:
+        self.on_ground = False
+        for solid in solids:
+            if not self.rect.colliderect(solid):
+                continue
+            if self.vel_y >= 0 and self.rect.bottom - solid.top <= max(12, abs(self.vel_y) + 4):
+                # Land on top
+                self.rect.bottom = solid.top
+                self.vel_y = 0.0
+                self.on_ground = True
+            elif self.vel_y < 0:
+                # Hit underside / ceiling of solid
+                self.rect.top = solid.bottom
+                self.vel_y = 0.0
+
+        if self.rect.bottom >= FLOOR_Y:
+            self.rect.bottom = FLOOR_Y
+            self.vel_y = 0.0
+            self.on_ground = True
+
+        # Adjacent tops do not colliderect in pygame — probe feet for support
+        if not self.on_ground and self.vel_y >= 0:
+            feet = pygame.Rect(
+                self.rect.left + 4, self.rect.bottom, max(1, self.rect.width - 8), 2
+            )
+            for solid in solids:
+                if feet.colliderect(solid):
+                    self.rect.bottom = solid.top
+                    self.vel_y = 0.0
+                    self.on_ground = True
+                    break
+
+    def update(self, solids: list[pygame.Rect] | None = None) -> None:
+        solids = solids or []
         dx = 0
         keys = pygame.key.get_pressed()
         moving = False
@@ -109,6 +156,25 @@ class Player(pygame.sprite.Sprite):
             dx = 0
 
         self.rect.x += dx
+        self._resolve_horizontal(solids)
+
+        # Jump (W / Up); Space remains shoot in Game
+        if self.on_ground and (keys[pygame.K_w] or keys[pygame.K_UP]):
+            self.vel_y = JUMP_VELOCITY
+            self.on_ground = False
+
+        self.vel_y += GRAVITY
+        self.rect.y += int(self.vel_y)
+        self._resolve_vertical(solids)
+
+        # Walk off edge → fall (already handled if not colliding top next frame)
         if not moving:
             self.index = 0.0
         self._animate(moving)
+        # Animate rebuilds rect around midbottom; re-check support
+        if self.on_ground:
+            self.vel_y = 0.0
+            self._resolve_vertical(solids)
+        if self.rect.bottom > FLOOR_Y and self.on_ground:
+            self.rect.bottom = FLOOR_Y
+        self.hitbox = self._compute_hitbox()

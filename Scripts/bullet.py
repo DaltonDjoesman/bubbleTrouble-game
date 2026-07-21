@@ -38,9 +38,13 @@ class Bullet(pygame.sprite.Sprite):
         # Collision rect derived from the scaled/composited laser surface
         self.rect = self.image.get_rect(midbottom=(self.x, self.base_y))
 
-    def update(self) -> None:
+    def update(self, solids: list[pygame.Rect] | None = None) -> None:
         self.top -= LASER_GROW_SPEED
         if self.top <= 0:
             self.kill()
             return
         self._rebuild()
+        for solid in solids or []:
+            if self.rect.colliderect(solid):
+                self.kill()
+                return

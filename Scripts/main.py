@@ -16,6 +16,7 @@ import pygame
 
 pygame.init()
 
+from assets import load_image
 from bolinha import Ball
 from bullet import Bullet
 from consts import (
@@ -24,6 +25,8 @@ from consts import (
     DEFAULT_LIVES,
     FPS,
     IFRAME_MS,
+    LIFE_HEART_SPRITE,
+    LIFE_HUD_SCALE,
     MAX_BULLETS,
     screenHeight,
     screenWidth,
@@ -70,6 +73,7 @@ class Game:
         self.font = pygame.font.Font(None, 36)
         self.big_font = pygame.font.Font(None, 64)
         self.background = _build_arena_background()
+        self._life_icon = load_image(LIFE_HEART_SPRITE, scale=LIFE_HUD_SCALE)
 
         self.bolas = pygame.sprite.Group()
         self.player = pygame.sprite.GroupSingle()

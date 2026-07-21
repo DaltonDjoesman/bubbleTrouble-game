@@ -5,6 +5,6 @@
 
 ## 2. HUD render
 
-- [ ] 2.1 Replace numeric `Lives: N` text with a row of life sprites equal to remaining lives
-- [ ] 2.2 Verify icons update on life loss and hide correctly at 0 / game over as designed
-- [ ] 2.3 Manual smoke: 3→2→1→0 lives visual check
+- [x] 2.1 Replace numeric `Lives: N` text with a row of life sprites equal to remaining lives
+- [x] 2.2 Verify icons update on life loss and hide correctly at 0 / game over as designed
+- [x] 2.3 Manual smoke: 3→2→1→0 lives visual check

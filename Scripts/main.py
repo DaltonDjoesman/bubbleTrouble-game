@@ -165,12 +165,17 @@ class Game:
             self.state = "won"
 
     def _draw_hud(self) -> None:
-        # High-contrast lives label (shadow + neon)
-        label = f"Lives: {self.lives}"
-        shadow = self.font.render(label, True, (0, 0, 0))
-        lives_surf = self.font.render(label, True, _NEON_CYAN)
-        self.screen.blit(shadow, (12, 12))
-        self.screen.blit(lives_surf, (10, 10))
+        # One heart icon per remaining life (top-left); none at 0 / game over
+        icon = self._life_icon
+        gap = 4
+        x, y = 10, 10
+        for i in range(self.lives):
+            ix = x + i * (icon.get_width() + gap)
+            # Drop shadow for contrast on the cyberpunk gradient
+            shadow = icon.copy()
+            shadow.fill((0, 0, 0, 180), special_flags=pygame.BLEND_RGBA_MULT)
+            self.screen.blit(shadow, (ix + 2, y + 2))
+            self.screen.blit(icon, (ix, y))
 
         if self.state in ("won", "game_over"):
             dim = pygame.Surface((screenWidth, screenHeight), flags=pygame.SRCALPHA)

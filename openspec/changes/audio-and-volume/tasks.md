@@ -12,6 +12,6 @@
 
 ## 3. Menu volumes + persistence
 
-- [ ] 3.1 Menu controls for music volume and SFX volume (independent)
-- [ ] 3.2 Save/load volumes (e.g. `settings.json`)
-- [ ] 3.3 Manual check: mute each channel, relaunch persistence
+- [x] 3.1 Menu controls for music volume and SFX volume (independent)
+- [x] 3.2 Save/load volumes (e.g. `settings.json`)
+- [x] 3.3 Manual check: mute each channel, relaunch persistence

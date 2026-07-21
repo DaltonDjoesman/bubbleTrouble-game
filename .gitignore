@@ -12,6 +12,9 @@ env/
 .env
 .env.*
 
+# Local player settings (volumes, etc.)
+settings.json
+
 # OS / editors
 .DS_Store
 Thumbs.db

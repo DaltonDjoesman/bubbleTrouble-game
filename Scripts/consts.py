@@ -86,3 +86,19 @@ GUN_HAND_Y_FRAC = 0.48
 SHOOT_EFFECT_MS = 100
 # Effects are strip cells; keep small (1× after crop) so muzzle flash ≠ whole sheet
 SHOOT_EFFECT_SCALE = 1
+
+# Audio (Kenney CC0 — see audio/CREDITS.md)
+AUDIO_DIR = PROJECT_ROOT / "audio"
+AUDIO_MUSIC_PATH = AUDIO_DIR / "music" / "bgm.ogg"
+AUDIO_SFX = {
+    "shoot": AUDIO_DIR / "sfx" / "shoot.ogg",
+    "ball_pop": AUDIO_DIR / "sfx" / "ball_pop.ogg",
+    "player_hit": AUDIO_DIR / "sfx" / "player_hit.ogg",
+    "win": AUDIO_DIR / "sfx" / "win.ogg",
+    "lose": AUDIO_DIR / "sfx" / "lose.ogg",
+    "ui_select": AUDIO_DIR / "sfx" / "ui_select.wav",
+    "ui_confirm": AUDIO_DIR / "sfx" / "ui_confirm.wav",
+}
+VOLUME_MAX = 10
+VOLUME_DEFAULT = 7
+SETTINGS_PATH = PROJECT_ROOT / "settings.json"

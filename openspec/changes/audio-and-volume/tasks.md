@@ -6,9 +6,9 @@
 
 ## 2. Audio manager
 
-- [ ] 2.1 Init mixer in bootstrap; implement play_music / play_sfx / set volumes
-- [ ] 2.2 Hook SFX to shoot, ball hit/split, player hit, win, lose, menu navigate/confirm
-- [ ] 2.3 Graceful no-op if mixer/device unavailable
+- [x] 2.1 Init mixer in bootstrap; implement play_music / play_sfx / set volumes
+- [x] 2.2 Hook SFX to shoot, ball hit/split, player hit, win, lose, menu navigate/confirm
+- [x] 2.3 Graceful no-op if mixer/device unavailable
 
 ## 3. Menu volumes + persistence
 

@@ -5,6 +5,7 @@ Run from the repository root:
 """
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 
@@ -16,6 +17,7 @@ import pygame
 
 pygame.init()
 
+from audio import init_audio
 from assets import load_image
 from bolinha import Ball
 from bullet import Bullet
@@ -31,8 +33,11 @@ from consts import (
     screenHeight,
     screenWidth,
 )
+from menu import MainMenu
 from player import Player
 from shoot_effect import ShootEffect
+
+logging.basicConfig(level=logging.WARNING)
 
 # Cyberpunk palette (HUD + arena)
 _BG_TOP = (12, 8, 32)
@@ -78,18 +83,22 @@ class Game:
             for n, path in LIFE_BAR_SPRITES.items()
         }
 
+        self.audio = init_audio()
+        self.menu = MainMenu(self.font, self.big_font, self.audio)
+
         self.bolas = pygame.sprite.Group()
         self.player = pygame.sprite.GroupSingle()
         self.bullets = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
 
-        self.state = "playing"
+        self.state = "menu"
         self.lives = DEFAULT_LIVES
         self.iframe_until = 0
         self.fire_cooldown_until = 0
+        self._end_sfx_played = False
 
         self._ball_base_image = pygame.image.load(BOLA_SPRITE).convert_alpha()
-        self.reset_match()
+        self.audio.play_music()
 
     def reset_match(self) -> None:
         self.bolas.empty()
@@ -100,6 +109,7 @@ class Game:
         self.iframe_until = 0
         self.fire_cooldown_until = 0
         self.state = "playing"
+        self._end_sfx_played = False
 
         self.player.add(Player(screenWidth // 2, screenHeight - 4))
         # Playable arena: one large + one medium ball
@@ -132,6 +142,7 @@ class Game:
         self.bullets.add(Bullet(mx, my))
         self.effects.add(ShootEffect(mx, my))
         self.fire_cooldown_until = now + BULLET_COOLDOWN_MS
+        self.audio.play_sfx("shoot")
 
     def _handle_bullet_ball_hits(self) -> None:
         # Laser removed on hit; ball split/removed
@@ -141,6 +152,7 @@ class Game:
                 children = ball.split(self._ball_base_image)
                 ball.kill()
                 self.bolas.add(*children)
+                self.audio.play_sfx("ball_pop")
 
     def _handle_player_ball_hits(self) -> None:
         p = self.player.sprite
@@ -154,6 +166,7 @@ class Game:
             return
 
         self.lives -= 1
+        self.audio.play_sfx("player_hit")
         if self.lives <= 0:
             self.lives = 0
             self.state = "game_over"
@@ -166,6 +179,16 @@ class Game:
     def _check_win(self) -> None:
         if self.state == "playing" and len(self.bolas) == 0:
             self.state = "won"
+
+    def _play_end_sfx_once(self) -> None:
+        if self._end_sfx_played:
+            return
+        if self.state == "won":
+            self.audio.play_sfx("win")
+            self._end_sfx_played = True
+        elif self.state == "game_over":
+            self.audio.play_sfx("lose")
+            self._end_sfx_played = True
 
     def _draw_hud(self) -> None:
         # Capsule life bar for remaining lives; hidden at 0 / game over
@@ -184,14 +207,23 @@ class Game:
 
         if self.state == "won":
             msg = self.big_font.render("YOU WIN", True, _NEON_CYAN)
-            hint = self.font.render("Press R to restart", True, _HUD_DIM)
+            hint = self.font.render("R retry · M menu", True, _HUD_DIM)
             self.screen.blit(msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20)))
             self.screen.blit(hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30)))
         elif self.state == "game_over":
             msg = self.big_font.render("GAME OVER", True, _NEON_MAGENTA)
-            hint = self.font.render("Press R to restart", True, _HUD_DIM)
+            hint = self.font.render("R retry · M menu", True, _HUD_DIM)
             self.screen.blit(msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20)))
             self.screen.blit(hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30)))
+
+    def _go_menu(self) -> None:
+        self.state = "menu"
+        self.bolas.empty()
+        self.bullets.empty()
+        self.effects.empty()
+        self.player.empty()
+        self._end_sfx_played = False
+        self.audio.play_music()
 
     def runGame(self) -> None:
         run = True
@@ -203,33 +235,58 @@ class Game:
                 if event.type == pygame.QUIT:
                     run = False
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE and self.state == "playing":
+                    if self.state == "menu":
+                        result = self.menu.handle_keydown(event.key)
+                        if result.quit_app:
+                            run = False
+                        elif result.start_game:
+                            self.reset_match()
+                    elif event.key == pygame.K_SPACE and self.state == "playing":
                         self._try_fire()
                     elif event.key == pygame.K_r and self.state in ("won", "game_over"):
                         self.reset_match()
+                    elif event.key == pygame.K_m and self.state in ("won", "game_over"):
+                        self._go_menu()
+                    elif event.key == pygame.K_ESCAPE and self.state in (
+                        "won",
+                        "game_over",
+                        "playing",
+                    ):
+                        self._go_menu()
 
             self.screen.blit(self.background, (0, 0))
 
-            if self.state == "playing":
-                self.bolas.update()
-                self.bullets.update()
-                self.effects.update()
-                self.player.update()
-                self._handle_bullet_ball_hits()
-                self._handle_player_ball_hits()
-                self._check_win()
+            if self.state == "menu":
+                self.menu.draw(self.screen)
+            else:
+                if self.state == "playing":
+                    self.bolas.update()
+                    self.bullets.update()
+                    self.effects.update()
+                    self.player.update()
+                    self._handle_bullet_ball_hits()
+                    self._handle_player_ball_hits()
+                    self._check_win()
 
-            self.bolas.draw(self.screen)
-            self.bullets.draw(self.screen)
-            self.effects.draw(self.screen)
-            # Blink player during i-frames
-            if self.player.sprite is not None:
-                if self.state != "playing" or now >= self.iframe_until or (now // 100) % 2 == 0:
-                    self.player.draw(self.screen)
+                self._play_end_sfx_once()
 
-            self._draw_hud()
+                self.bolas.draw(self.screen)
+                self.bullets.draw(self.screen)
+                self.effects.draw(self.screen)
+                # Blink player during i-frames
+                if self.player.sprite is not None:
+                    if (
+                        self.state != "playing"
+                        or now >= self.iframe_until
+                        or (now // 100) % 2 == 0
+                    ):
+                        self.player.draw(self.screen)
+
+                self._draw_hud()
+
             pygame.display.update()
 
+        self.audio.save_settings()
         pygame.quit()
 
 

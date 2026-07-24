@@ -37,6 +37,7 @@ from levels import (
     DEFAULT_LEVEL,
     MAX_LEVEL,
     Level,
+    build_arena_background,
     draw_arena_geometry,
     get_level,
 )
@@ -46,37 +47,13 @@ from shoot_effect import ShootEffect
 
 logging.basicConfig(level=logging.WARNING)
 
-# Cyberpunk palette (HUD + arena)
-_BG_TOP = (12, 8, 32)
-_BG_BOTTOM = (28, 10, 48)
+# Cyberpunk palette (HUD)
 _NEON_CYAN = (80, 240, 255)
 _NEON_MAGENTA = (255, 70, 180)
 _HUD_DIM = (180, 200, 220)
 _OVERLAY = (8, 4, 20, 180)
 
 LEVEL_CLEAR_AUTO_MS = 1800
-
-
-def _build_arena_background() -> pygame.Surface:
-    """Vertical cyberpunk gradient + scanlines + neon floor accent."""
-    surf = pygame.Surface((screenWidth, screenHeight))
-    for y in range(screenHeight):
-        t = y / max(1, screenHeight - 1)
-        r = int(_BG_TOP[0] + (_BG_BOTTOM[0] - _BG_TOP[0]) * t)
-        g = int(_BG_TOP[1] + (_BG_BOTTOM[1] - _BG_TOP[1]) * t)
-        b = int(_BG_TOP[2] + (_BG_BOTTOM[2] - _BG_TOP[2]) * t)
-        pygame.draw.line(surf, (r, g, b), (0, y), (screenWidth, y))
-    # Subtle scanlines (skip every other band; keep gradient visible)
-    for y in range(2, screenHeight, 4):
-        pygame.draw.line(surf, (0, 0, 0), (0, y), (screenWidth, y))
-    # Neon floor strip
-    pygame.draw.line(
-        surf, _NEON_CYAN, (0, screenHeight - 3), (screenWidth, screenHeight - 3), 2
-    )
-    pygame.draw.line(
-        surf, _NEON_MAGENTA, (0, screenHeight - 6), (screenWidth, screenHeight - 6), 1
-    )
-    return surf
 
 
 class Game:
@@ -86,7 +63,9 @@ class Game:
         pygame.display.set_caption("Bubble Trouble")
         self.font = pygame.font.Font(None, 36)
         self.big_font = pygame.font.Font(None, 64)
-        self.background = _build_arena_background()
+        self.current_level: Level = get_level(DEFAULT_LEVEL)
+        self.background = build_arena_background(self.current_level.theme)
+        self._menu_background = build_arena_background(get_level(DEFAULT_LEVEL).theme)
         self._life_bars = {
             n: load_image(path, scale=LIFE_HUD_SCALE, colorkey=(255, 255, 255), crop=True)
             for n, path in LIFE_BAR_SPRITES.items()
@@ -117,7 +96,6 @@ class Game:
         self._notice: str | None = None
         self._notice_until = 0
         self._level_clear_at = 0
-        self.current_level: Level = get_level(DEFAULT_LEVEL)
         self._solids: list[pygame.Rect] = []
 
         self._ball_base_image = pygame.image.load(BOLA_SPRITE).convert_alpha()
@@ -157,8 +135,9 @@ class Game:
             self._show_notice("2P soon — starting 1P")
 
         self.current_level = get_level(self.selected_level)
+        self.background = build_arena_background(self.current_level.theme)
         self._solids = self.current_level.solid_rects()
-        self.player.add(Player(screenWidth // 2, FLOOR_Y))
+        self.player.add(Player(self.current_level.player_x, FLOOR_Y))
         for spawn in self.current_level.balls:
             self.bolas.add(
                 Ball(
@@ -374,7 +353,10 @@ class Game:
             ):
                 self._advance_to_next_level()
 
-            self.screen.blit(self.background, (0, 0))
+            self.screen.blit(
+                self._menu_background if self.state == "menu" else self.background,
+                (0, 0),
+            )
 
             if self.state == "menu":
                 self.menu.draw(self.screen)

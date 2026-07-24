@@ -97,45 +97,82 @@ class Player(pygame.sprite.Sprite):
         self.hitbox = self._compute_hitbox()
         self.index += self.index_speed
 
+    def _body_box(self) -> pygame.Rect:
+        """Solid collider from body hitbox — ignores gun overhang in self.rect (~96px)."""
+        hb = self.hitbox
+        w = max(16, hb.width)
+        h = max(24, hb.height)
+        return pygame.Rect(
+            self.rect.centerx - w // 2,
+            self.rect.bottom - h,
+            w,
+            h,
+        )
+
+    def _apply_body_box(self, box: pygame.Rect) -> None:
+        """Keep sprite feet locked to the body collider after resolution."""
+        self.rect.midbottom = (box.centerx, box.bottom)
+
+    def _standing_on_top(self, box: pygame.Rect, solid: pygame.Rect) -> bool:
+        """True when the body is supported on this solid's top (not a side hit)."""
+        feet_on_top = solid.top - 4 <= box.bottom <= solid.top + 4
+        over_h = solid.left < box.centerx < solid.right
+        return feet_on_top and over_h
+
+    def _clamp_body_to_screen(self, box: pygame.Rect) -> pygame.Rect:
+        if box.left < 0:
+            box.x = 0
+        if box.right > screenWidth:
+            box.x = screenWidth - box.width
+        return box
+
     def _resolve_horizontal(self, solids: list[pygame.Rect]) -> None:
+        box = self._body_box()
         for solid in solids:
-            if self.rect.colliderect(solid):
-                if self.rect.centerx < solid.centerx:
-                    self.rect.right = solid.left
-                else:
-                    self.rect.left = solid.right
+            if not box.colliderect(solid):
+                continue
+            if self._standing_on_top(box, solid):
+                continue
+            if box.centerx < solid.centerx:
+                box.right = solid.left
+            else:
+                box.left = solid.right
+        box = self._clamp_body_to_screen(box)
+        self._apply_body_box(box)
 
     def _resolve_vertical(self, solids: list[pygame.Rect]) -> None:
         self.on_ground = False
+        box = self._body_box()
         for solid in solids:
-            if not self.rect.colliderect(solid):
+            if not box.colliderect(solid):
                 continue
-            if self.vel_y >= 0 and self.rect.bottom - solid.top <= max(12, abs(self.vel_y) + 4):
+            if self.vel_y >= 0 and box.bottom - solid.top <= max(12, abs(self.vel_y) + 4):
                 # Land on top
-                self.rect.bottom = solid.top
+                box.bottom = solid.top
                 self.vel_y = 0.0
                 self.on_ground = True
             elif self.vel_y < 0:
                 # Hit underside / ceiling of solid
-                self.rect.top = solid.bottom
+                box.top = solid.bottom
                 self.vel_y = 0.0
 
-        if self.rect.bottom >= FLOOR_Y:
-            self.rect.bottom = FLOOR_Y
+        if box.bottom >= FLOOR_Y:
+            box.bottom = FLOOR_Y
             self.vel_y = 0.0
             self.on_ground = True
 
         # Adjacent tops do not colliderect in pygame — probe feet for support
         if not self.on_ground and self.vel_y >= 0:
-            feet = pygame.Rect(
-                self.rect.left + 4, self.rect.bottom, max(1, self.rect.width - 8), 2
-            )
+            feet = pygame.Rect(box.left + 2, box.bottom, max(1, box.width - 4), 2)
             for solid in solids:
                 if feet.colliderect(solid):
-                    self.rect.bottom = solid.top
+                    box.bottom = solid.top
                     self.vel_y = 0.0
                     self.on_ground = True
                     break
+
+        box = self._clamp_body_to_screen(box)
+        self._apply_body_box(box)
 
     def update(self, solids: list[pygame.Rect] | None = None) -> None:
         solids = solids or []
@@ -152,8 +189,12 @@ class Player(pygame.sprite.Sprite):
             self.facing_right = False
             moving = True
 
-        if self.rect.left + dx < 0 or self.rect.right + dx > screenWidth:
-            dx = 0
+        # Screen bounds use body collider — not visual rect (gun overhang ~96px)
+        box = self._body_box()
+        if box.left + dx < 0:
+            dx = -box.left
+        elif box.right + dx > screenWidth:
+            dx = screenWidth - box.right
 
         self.rect.x += dx
         self._resolve_horizontal(solids)

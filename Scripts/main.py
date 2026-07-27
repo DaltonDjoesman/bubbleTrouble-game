@@ -49,6 +49,7 @@ from levels import (
 )
 from menu import MainMenu
 from player import FLOOR_Y, Player
+from powerup import Powerup, maybe_spawn_powerup
 from shoot_effect import ShootEffect
 
 logging.basicConfig(level=logging.WARNING)
@@ -187,15 +188,15 @@ class Game:
             return
 
         mode = getattr(p, "weapon_mode", "harpoon")
-        # STICKY: at most one planted sticky line at a time
+        # STICKY: at most one sticky line (growing or planted)
         if mode == "sticky":
-            sticky_count = sum(
-                1 for b in self.bullets if getattr(b, "mode", "") == "sticky"
-            )
-            if sticky_count >= 1:
+            if any(getattr(b, "mode", "") == "sticky" for b in self.bullets):
                 return
-        elif len(self.bullets) >= MAX_BULLETS:
-            return
+        else:
+            # Planted sticky does not consume the harpoon/drill slot cap
+            active = sum(1 for b in self.bullets if getattr(b, "mode", "") != "sticky")
+            if active >= MAX_BULLETS:
+                return
 
         mx, my = p.muzzle
         self.bullets.add(Bullet(mx, my, mode=mode))
@@ -204,11 +205,38 @@ class Game:
         self.audio.play_sfx("shoot")
 
     def _resolve_ball_hit(self, ball: Ball) -> None:
+        cx, cy = ball.rect.center
         children = ball.split(self._ball_base_image)
         ball.kill()
         self.bolas.add(*children)
         self.audio.play_sfx("ball_pop")
-        # Powerup drops wired in section 4; hook kept here for hit path
+        drop = maybe_spawn_powerup(cx, cy)
+        if drop is not None:
+            self.powerups.add(drop)
+
+    def _apply_powerup(self, power: Powerup) -> None:
+        p = self.player.sprite
+        if power.kind == "TIME":
+            self.add_time(TIME_POWER_SECONDS)
+            self._show_notice(f"+{TIME_POWER_SECONDS}s", 1200)
+            return
+        if p is None:
+            return
+        if power.kind == "STICKY":
+            p.weapon_mode = "sticky"
+            self._show_notice("STICKY", 1200)
+        elif power.kind == "DRILL":
+            p.weapon_mode = "drill"
+            self._show_notice("DRILL", 1200)
+
+    def _handle_powerup_pickups(self) -> None:
+        p = self.player.sprite
+        if p is None:
+            return
+        for power in list(self.powerups):
+            if p.hitbox.colliderect(power.rect):
+                self._apply_powerup(power)
+                power.kill()
 
     def _handle_bullet_ball_hits(self) -> None:
         # Default/STICKY/DRILL diverge on whether the laser despawns on first hit
@@ -286,6 +314,15 @@ class Game:
                 _HUD_DIM,
             )
             self.screen.blit(label, (screenWidth - label.get_width() - 12, 12))
+            p = self.player.sprite
+            if p is not None and self.state == "playing":
+                mode = getattr(p, "weapon_mode", "harpoon").upper()
+                if mode != "HARPOON":
+                    wlabel = self.font.render(mode, True, _NEON_CYAN)
+                    self.screen.blit(
+                        wlabel,
+                        (TIME_BAR_POS[0], TIME_BAR_POS[1] + TIME_BAR_HEIGHT + 6),
+                    )
 
         if self.state in ("won", "game_over", "level_clear"):
             dim = pygame.Surface((screenWidth, screenHeight), flags=pygame.SRCALPHA)
@@ -415,6 +452,7 @@ class Game:
                     self.powerups.update()
                     self.player.update(self._solids)
                     self._handle_bullet_ball_hits()
+                    self._handle_powerup_pickups()
                     self._handle_player_ball_hits()
                     self._check_win()
 

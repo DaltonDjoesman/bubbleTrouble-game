@@ -19,11 +19,11 @@
 
 ## 4. Weapons and powerups
 
-- [ ] 4.1 Add weapon mode state (default harpoon / STICKY / DRILL); reset on level start
-- [ ] 4.2 STICKY: plant one sticky line that stays until ball hit; keep planted on mode switch
-- [ ] 4.3 DRILL: pierce all balls on vertical path until barrier/closed door/ceiling
-- [ ] 4.4 Default harpoon: despawn on first ball or ceiling/barrier as today + solids
-- [ ] 4.5 Random drops on ball kill; pickup TIME (+seconds), STICKY, DRILL; one weapon at a time
+- [x] 4.1 Add weapon mode state (default harpoon / STICKY / DRILL); reset on level start
+- [x] 4.2 STICKY: plant one sticky line that stays until ball hit; keep planted on mode switch
+- [x] 4.3 DRILL: pierce all balls on vertical path until barrier/closed door/ceiling
+- [x] 4.4 Default harpoon: despawn on first ball or ceiling/barrier as today + solids
+- [x] 4.5 Random drops on ball kill; pickup TIME (+seconds), STICKY, DRILL; one weapon at a time
 
 ## 5. Redesign five levels
 

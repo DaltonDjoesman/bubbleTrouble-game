@@ -19,6 +19,8 @@ PLAYER_VEL_X = 6
 TIME_DRAIN_PER_SEC = 1.0
 TIME_POWER_SECONDS = 8
 POWERUP_DROP_CHANCE = 0.28
+POWERUP_SIZE = 22
+POWERUP_FALL_MAX = 4.0
 # Crawl gap under barriers/doors so the player can cross (pixels above floor)
 BARRIER_CRAWL_GAP = 72
 

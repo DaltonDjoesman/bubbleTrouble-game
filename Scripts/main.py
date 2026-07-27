@@ -40,8 +40,10 @@ from consts import (
 from levels import (
     DEFAULT_LEVEL,
     MAX_LEVEL,
+    DoorRuntime,
     Level,
     build_arena_background,
+    collect_solids,
     draw_arena_geometry,
     get_level,
 )
@@ -97,6 +99,7 @@ class Game:
         self._notice: str | None = None
         self._notice_until = 0
         self._level_clear_at = 0
+        self._doors: list[DoorRuntime] = []
         self._solids: list[pygame.Rect] = []
 
         self._ball_base_image = pygame.image.load(BOLA_SPRITE).convert_alpha()
@@ -144,7 +147,11 @@ class Game:
 
         self.current_level = get_level(self.selected_level)
         self.background = build_arena_background(self.current_level.theme)
-        self._solids = self.current_level.solid_rects()
+        now = pygame.time.get_ticks()
+        self._doors = self.current_level.make_doors()
+        for door in self._doors:
+            door.reset(now)
+        self._solids = collect_solids(self.current_level, self._doors)
         self._refill_time()
         p = Player(self.current_level.player_x, FLOOR_Y)
         p.weapon_mode = "harpoon"
@@ -395,10 +402,13 @@ class Game:
             if self.state == "menu":
                 self.menu.draw(self.screen)
             else:
-                draw_arena_geometry(self.screen, self.current_level)
+                draw_arena_geometry(self.screen, self.current_level, self._doors)
 
                 if self.state == "playing":
                     self._drain_time()
+                    for door in self._doors:
+                        door.update(now, self.bolas)
+                    self._solids = collect_solids(self.current_level, self._doors)
                     self.bolas.update(self._solids)
                     self.bullets.update(self._solids)
                     self.effects.update()

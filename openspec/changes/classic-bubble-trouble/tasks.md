@@ -12,10 +12,10 @@
 
 ## 3. Barriers and doors
 
-- [ ] 3.1 Change level schema: barriers + doors + `time_seconds`; drop platforms
-- [ ] 3.2 Collision: balls and lasers solid vs barriers / closed doors; player crawl under gaps
-- [ ] 3.3 Implement door modes: timed cycle and lane-clear open
-- [ ] 3.4 Update draw path for barriers/doors (no platform shelves)
+- [x] 3.1 Change level schema: barriers + doors + `time_seconds`; drop platforms
+- [x] 3.2 Collision: balls and lasers solid vs barriers / closed doors; player crawl under gaps
+- [x] 3.3 Implement door modes: timed cycle and lane-clear open
+- [x] 3.4 Update draw path for barriers/doors (no platform shelves)
 
 ## 4. Weapons and powerups
 

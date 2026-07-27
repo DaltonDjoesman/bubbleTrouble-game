@@ -278,7 +278,7 @@ class MainMenu:
             badge = pygame.Rect(card_rect.left + 14, card_rect.centery - 14, 28, 28)
             pygame.draw.rect(
                 screen,
-                lvl.theme.platform_edge if selected else _CARD_BORDER,
+                lvl.theme.barrier_edge if selected else _CARD_BORDER,
                 badge,
                 border_radius=6,
             )

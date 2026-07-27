@@ -4,7 +4,6 @@ import pygame
 
 from assets import load_image, load_strip_frames
 from consts import (
-    GRAVITY,
     GUN_HAND_Y_FRAC,
     GUN_SCALE,
     GUN_SPRITE,
@@ -12,11 +11,11 @@ from consts import (
     PLAYER_IDLE_FRAMES,
     PLAYER_RUN_FRAMES,
     PLAYER_SCALE,
+    PLAYER_VEL_X,
     screenHeight,
     screenWidth,
 )
 
-JUMP_VELOCITY = -11
 FLOOR_Y = screenHeight - 4
 
 
@@ -31,9 +30,8 @@ class Player(pygame.sprite.Sprite):
         self.facing_right = True
         self.index = 0.0
         self.index_speed = 0.15
-        self.vel_x = 8
-        self.vel_y = 0.0
-        self.on_ground = True
+        self.vel_x = PLAYER_VEL_X
+        self.weapon_mode = "harpoon"
         self.muzzle = (x, y)
         self.image = self.idle_sprites[0]
         self.rect = self.image.get_rect(midbottom=(x, min(y, FLOOR_Y)))
@@ -113,12 +111,6 @@ class Player(pygame.sprite.Sprite):
         """Keep sprite feet locked to the body collider after resolution."""
         self.rect.midbottom = (box.centerx, box.bottom)
 
-    def _standing_on_top(self, box: pygame.Rect, solid: pygame.Rect) -> bool:
-        """True when the body is supported on this solid's top (not a side hit)."""
-        feet_on_top = solid.top - 4 <= box.bottom <= solid.top + 4
-        over_h = solid.left < box.centerx < solid.right
-        return feet_on_top and over_h
-
     def _clamp_body_to_screen(self, box: pygame.Rect) -> pygame.Rect:
         if box.left < 0:
             box.x = 0
@@ -127,50 +119,15 @@ class Player(pygame.sprite.Sprite):
         return box
 
     def _resolve_horizontal(self, solids: list[pygame.Rect]) -> None:
+        """Block against floor-reaching solids; crawl gaps under barriers stay passable."""
         box = self._body_box()
         for solid in solids:
             if not box.colliderect(solid):
-                continue
-            if self._standing_on_top(box, solid):
                 continue
             if box.centerx < solid.centerx:
                 box.right = solid.left
             else:
                 box.left = solid.right
-        box = self._clamp_body_to_screen(box)
-        self._apply_body_box(box)
-
-    def _resolve_vertical(self, solids: list[pygame.Rect]) -> None:
-        self.on_ground = False
-        box = self._body_box()
-        for solid in solids:
-            if not box.colliderect(solid):
-                continue
-            if self.vel_y >= 0 and box.bottom - solid.top <= max(12, abs(self.vel_y) + 4):
-                # Land on top
-                box.bottom = solid.top
-                self.vel_y = 0.0
-                self.on_ground = True
-            elif self.vel_y < 0:
-                # Hit underside / ceiling of solid
-                box.top = solid.bottom
-                self.vel_y = 0.0
-
-        if box.bottom >= FLOOR_Y:
-            box.bottom = FLOOR_Y
-            self.vel_y = 0.0
-            self.on_ground = True
-
-        # Adjacent tops do not colliderect in pygame — probe feet for support
-        if not self.on_ground and self.vel_y >= 0:
-            feet = pygame.Rect(box.left + 2, box.bottom, max(1, box.width - 4), 2)
-            for solid in solids:
-                if feet.colliderect(solid):
-                    box.bottom = solid.top
-                    self.vel_y = 0.0
-                    self.on_ground = True
-                    break
-
         box = self._clamp_body_to_screen(box)
         self._apply_body_box(box)
 
@@ -199,23 +156,11 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += dx
         self._resolve_horizontal(solids)
 
-        # Jump (W / Up); Space remains shoot in Game
-        if self.on_ground and (keys[pygame.K_w] or keys[pygame.K_UP]):
-            self.vel_y = JUMP_VELOCITY
-            self.on_ground = False
+        # Classic: locked to floor baseline (no jump / platform standing)
+        self.rect.bottom = FLOOR_Y
 
-        self.vel_y += GRAVITY
-        self.rect.y += int(self.vel_y)
-        self._resolve_vertical(solids)
-
-        # Walk off edge → fall (already handled if not colliding top next frame)
         if not moving:
             self.index = 0.0
         self._animate(moving)
-        # Animate rebuilds rect around midbottom; re-check support
-        if self.on_ground:
-            self.vel_y = 0.0
-            self._resolve_vertical(solids)
-        if self.rect.bottom > FLOOR_Y and self.on_ground:
-            self.rect.bottom = FLOOR_Y
+        self.rect.bottom = FLOOR_Y
         self.hitbox = self._compute_hitbox()

@@ -13,8 +13,14 @@ MAX_BULLETS = 2  # max active lasers
 BULLET_COOLDOWN_MS = 150
 LASER_GROW_SPEED = 10
 LASER_WIDTH = 6
-DEFAULT_LIVES = 3
-IFRAME_MS = 1500
+# Classic: ~25% slower than the old hard-coded vel_x=8
+PLAYER_VEL_X = 6
+# Time barrier (survival resource replaces multi-life stock)
+TIME_DRAIN_PER_SEC = 1.0
+TIME_POWER_SECONDS = 8
+POWERUP_DROP_CHANCE = 0.28
+# Crawl gap under barriers/doors so the player can cross (pixels above floor)
+BARRIER_CRAWL_GAP = 72
 
 # Ball size tiers: large → medium → small
 BALL_SIZES = {
@@ -66,14 +72,14 @@ SHOOT_EFFECT_FRAMES = [
 
 BOLA_SPRITE = PROJECT_ROOT / "Assests" / "bola branca.png"
 
-# Life HUD: capsule bars (cleaner edges than Heart.png white matte)
-LIFE_DIR = PROJECT_ROOT / "sprites" / "Life"
-LIFE_BAR_SPRITES = {
-    3: LIFE_DIR / "life1.png",  # full
-    2: LIFE_DIR / "life2.png",  # ~2/3
-    1: LIFE_DIR / "life4.png",  # ~1/3
-}
-LIFE_HUD_SCALE = 0.42  # life*.png are 301×53
+# Time barrier HUD (replaces multi-life capsule display)
+TIME_BAR_WIDTH = 220
+TIME_BAR_HEIGHT = 18
+TIME_BAR_POS = (12, 12)
+TIME_BAR_FILL = (220, 40, 70)
+TIME_BAR_FILL_LOW = (255, 90, 40)
+TIME_BAR_EDGE = (255, 120, 160)
+TIME_BAR_BG = (20, 8, 18)
 
 PLAYER_FRAME_SIZE = 48
 PLAYER_SCALE = SPRITE_SCALE  # alias — documented scale lives in assets.SPRITE_SCALE

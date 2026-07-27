@@ -18,18 +18,22 @@ import pygame
 pygame.init()
 
 from audio import init_audio
-from assets import load_image
 from bolinha import Ball
 from bullet import Bullet
 from consts import (
     BOLA_SPRITE,
     BULLET_COOLDOWN_MS,
-    DEFAULT_LIVES,
     FPS,
-    IFRAME_MS,
-    LIFE_BAR_SPRITES,
-    LIFE_HUD_SCALE,
     MAX_BULLETS,
+    TIME_BAR_BG,
+    TIME_BAR_EDGE,
+    TIME_BAR_FILL,
+    TIME_BAR_FILL_LOW,
+    TIME_BAR_HEIGHT,
+    TIME_BAR_POS,
+    TIME_BAR_WIDTH,
+    TIME_DRAIN_PER_SEC,
+    TIME_POWER_SECONDS,
     screenHeight,
     screenWidth,
 )
@@ -66,10 +70,6 @@ class Game:
         self.current_level: Level = get_level(DEFAULT_LEVEL)
         self.background = build_arena_background(self.current_level.theme)
         self._menu_background = build_arena_background(get_level(DEFAULT_LEVEL).theme)
-        self._life_bars = {
-            n: load_image(path, scale=LIFE_HUD_SCALE, colorkey=(255, 255, 255), crop=True)
-            for n, path in LIFE_BAR_SPRITES.items()
-        }
 
         self.audio = init_audio()
         self.selected_mode = "1P"
@@ -87,10 +87,11 @@ class Game:
         self.player = pygame.sprite.GroupSingle()
         self.bullets = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
+        self.powerups = pygame.sprite.Group()
 
         self.state = "menu"
-        self.lives = DEFAULT_LIVES
-        self.iframe_until = 0
+        self.time_max = float(self.current_level.time_seconds)
+        self.time_remaining = self.time_max
         self.fire_cooldown_until = 0
         self._end_sfx_played = False
         self._notice: str | None = None
@@ -109,6 +110,14 @@ class Game:
         self._notice = text
         self._notice_until = pygame.time.get_ticks() + duration_ms
 
+    def _refill_time(self) -> None:
+        self.time_max = float(self.current_level.time_seconds)
+        self.time_remaining = self.time_max
+
+    def add_time(self, seconds: float) -> None:
+        """TIME powerup: add seconds, clamped to this level's budget."""
+        self.time_remaining = min(self.time_max, self.time_remaining + seconds)
+
     def reset_match(
         self,
         mode: str | None = None,
@@ -122,9 +131,8 @@ class Game:
         self.bolas.empty()
         self.bullets.empty()
         self.effects.empty()
+        self.powerups.empty()
         self.player.empty()
-        self.lives = DEFAULT_LIVES
-        self.iframe_until = 0
         self.fire_cooldown_until = 0
         self.state = "playing"
         self._end_sfx_played = False
@@ -137,7 +145,10 @@ class Game:
         self.current_level = get_level(self.selected_level)
         self.background = build_arena_background(self.current_level.theme)
         self._solids = self.current_level.solid_rects()
-        self.player.add(Player(self.current_level.player_x, FLOOR_Y))
+        self._refill_time()
+        p = Player(self.current_level.player_x, FLOOR_Y)
+        p.weapon_mode = "harpoon"
+        self.player.add(p)
         for spawn in self.current_level.balls:
             self.bolas.add(
                 Ball(
@@ -164,49 +175,68 @@ class Game:
         now = pygame.time.get_ticks()
         if now < self.fire_cooldown_until:
             return
-        if len(self.bullets) >= MAX_BULLETS:
-            return
         p = self.player.sprite
         if p is None:
             return
-        # Laser + flash spawn from the upward gun muzzle
+
+        mode = getattr(p, "weapon_mode", "harpoon")
+        # STICKY: at most one planted sticky line at a time
+        if mode == "sticky":
+            sticky_count = sum(
+                1 for b in self.bullets if getattr(b, "mode", "") == "sticky"
+            )
+            if sticky_count >= 1:
+                return
+        elif len(self.bullets) >= MAX_BULLETS:
+            return
+
         mx, my = p.muzzle
-        self.bullets.add(Bullet(mx, my))
+        self.bullets.add(Bullet(mx, my, mode=mode))
         self.effects.add(ShootEffect(mx, my))
         self.fire_cooldown_until = now + BULLET_COOLDOWN_MS
         self.audio.play_sfx("shoot")
 
+    def _resolve_ball_hit(self, ball: Ball) -> None:
+        children = ball.split(self._ball_base_image)
+        ball.kill()
+        self.bolas.add(*children)
+        self.audio.play_sfx("ball_pop")
+        # Powerup drops wired in section 4; hook kept here for hit path
+
     def _handle_bullet_ball_hits(self) -> None:
-        # Laser removed on hit; ball split/removed
-        hits = pygame.sprite.groupcollide(self.bullets, self.bolas, True, False)
-        for _laser, balls in hits.items():
-            for ball in balls:
-                children = ball.split(self._ball_base_image)
-                ball.kill()
-                self.bolas.add(*children)
-                self.audio.play_sfx("ball_pop")
+        # Default/STICKY/DRILL diverge on whether the laser despawns on first hit
+        for laser in list(self.bullets):
+            mode = getattr(laser, "mode", "harpoon")
+            hit_balls = [b for b in self.bolas if laser.rect.colliderect(b.rect)]
+            if not hit_balls:
+                continue
+            if mode == "drill":
+                for ball in hit_balls:
+                    self._resolve_ball_hit(ball)
+                # Drill continues until solid/ceiling (handled in Bullet.update)
+                continue
+            # harpoon + sticky: first ball resolves and laser dies
+            self._resolve_ball_hit(hit_balls[0])
+            laser.kill()
 
     def _handle_player_ball_hits(self) -> None:
         p = self.player.sprite
         if p is None:
             return
-        now = pygame.time.get_ticks()
-        if now < self.iframe_until:
-            return
         hit = any(p.hitbox.colliderect(ball.rect) for ball in self.bolas)
         if not hit:
             return
-
-        self.lives -= 1
         self.audio.play_sfx("player_hit")
-        if self.lives <= 0:
-            self.lives = 0
-            self.state = "game_over"
-            return
+        # Classic 1P: one hit → immediate game over
+        self.state = "game_over"
 
-        # Stay in place; brief i-frames only
-        self.iframe_until = now + IFRAME_MS
-        self.bullets.empty()
+    def _drain_time(self) -> None:
+        if self.state != "playing":
+            return
+        self.time_remaining -= TIME_DRAIN_PER_SEC / FPS
+        if self.time_remaining <= 0:
+            self.time_remaining = 0.0
+            self.state = "game_over"
 
     def _check_win(self) -> None:
         if self.state != "playing" or len(self.bolas) != 0:
@@ -228,18 +258,21 @@ class Game:
             self.audio.play_sfx("lose")
             self._end_sfx_played = True
 
-    def _draw_hud(self) -> None:
-        # Capsule life bar for remaining lives; hidden at 0 / game over
-        bar = self._life_bars.get(self.lives)
-        if bar is not None:
-            x, y = 10, 10
-            shadow = bar.copy()
-            shadow.fill((0, 0, 0, 180), special_flags=pygame.BLEND_RGBA_MULT)
-            self.screen.blit(shadow, (x + 2, y + 2))
-            self.screen.blit(bar, (x, y))
+    def _draw_time_barrier(self) -> None:
+        x, y = TIME_BAR_POS
+        outer = pygame.Rect(x, y, TIME_BAR_WIDTH, TIME_BAR_HEIGHT)
+        pygame.draw.rect(self.screen, TIME_BAR_BG, outer, border_radius=4)
+        ratio = 0.0 if self.time_max <= 0 else max(0.0, min(1.0, self.time_remaining / self.time_max))
+        fill_w = int((TIME_BAR_WIDTH - 4) * ratio)
+        if fill_w > 0:
+            fill_color = TIME_BAR_FILL_LOW if ratio <= 0.25 else TIME_BAR_FILL
+            fill = pygame.Rect(x + 2, y + 2, fill_w, TIME_BAR_HEIGHT - 4)
+            pygame.draw.rect(self.screen, fill_color, fill, border_radius=3)
+        pygame.draw.rect(self.screen, TIME_BAR_EDGE, outer, width=2, border_radius=4)
 
-        # Level label while in a match
+    def _draw_hud(self) -> None:
         if self.state in ("playing", "level_clear", "won", "game_over"):
+            self._draw_time_barrier()
             label = self.font.render(
                 f"Lv {self.current_level.id}: {self.current_level.name}",
                 True,
@@ -281,6 +314,7 @@ class Game:
         self.bolas.empty()
         self.bullets.empty()
         self.effects.empty()
+        self.powerups.empty()
         self.player.empty()
         self._end_sfx_played = False
         self._notice = None
@@ -364,9 +398,11 @@ class Game:
                 draw_arena_geometry(self.screen, self.current_level)
 
                 if self.state == "playing":
+                    self._drain_time()
                     self.bolas.update(self._solids)
                     self.bullets.update(self._solids)
                     self.effects.update()
+                    self.powerups.update()
                     self.player.update(self._solids)
                     self._handle_bullet_ball_hits()
                     self._handle_player_ball_hits()
@@ -377,14 +413,9 @@ class Game:
                 self.bolas.draw(self.screen)
                 self.bullets.draw(self.screen)
                 self.effects.draw(self.screen)
-                # Blink player during i-frames
+                self.powerups.draw(self.screen)
                 if self.player.sprite is not None:
-                    if (
-                        self.state != "playing"
-                        or now >= self.iframe_until
-                        or (now // 100) % 2 == 0
-                    ):
-                        self.player.draw(self.screen)
+                    self.player.draw(self.screen)
 
                 self._draw_hud()
                 self._draw_notice(now)

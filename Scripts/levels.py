@@ -53,6 +53,7 @@ class Level:
     platforms: tuple[Solid, ...]
     obstacles: tuple[Solid, ...]
     theme: LevelTheme
+    time_seconds: int = 60
     player_x: int = screenWidth // 2
 
     def solid_rects(self) -> list[pygame.Rect]:
@@ -69,6 +70,7 @@ def _level(
     balls: list[BallSpawn],
     platforms: list[Solid] | None = None,
     obstacles: list[Solid] | None = None,
+    time_seconds: int = 60,
     player_x: int | None = None,
 ) -> Level:
     return Level(
@@ -79,6 +81,7 @@ def _level(
         balls=tuple(balls),
         platforms=tuple(platforms or ()),
         obstacles=tuple(obstacles or ()),
+        time_seconds=max(1, int(time_seconds)),
         player_x=screenWidth // 2 if player_x is None else player_x,
     )
 
@@ -153,6 +156,7 @@ _LEVELS: dict[int, Level] = {
         platforms=[
             Solid(270, 430, 260, 16),
         ],
+        time_seconds=45,
     ),
     # 2 — Two side shelves, open pit in the middle
     2: _level(
@@ -169,6 +173,7 @@ _LEVELS: dict[int, Level] = {
             Solid(540, 340, 220, 16),
             Solid(300, 480, 200, 16),
         ],
+        time_seconds=55,
     ),
     # 3 — Central pillar splits lanes; play around it
     3: _level(
@@ -190,6 +195,7 @@ _LEVELS: dict[int, Level] = {
         obstacles=[
             Solid(378, 200, 44, 200),
         ],
+        time_seconds=70,
         player_x=200,
     ),
     # 4 — Stair climb on the left, drop shaft on the right
@@ -215,6 +221,7 @@ _LEVELS: dict[int, Level] = {
         obstacles=[
             Solid(380, 280, 36, 90),
         ],
+        time_seconds=80,
         player_x=110,
     ),
     # 5 — Dense staggered shelves + flanking bounce walls
@@ -245,6 +252,7 @@ _LEVELS: dict[int, Level] = {
             Solid(460, 320, 30, 60),
             Solid(385, 420, 30, 50),
         ],
+        time_seconds=90,
     ),
 }
 

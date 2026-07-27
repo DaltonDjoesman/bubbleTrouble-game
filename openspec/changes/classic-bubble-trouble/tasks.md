@@ -33,5 +33,5 @@
 
 ## 6. Sibling change alignment
 
-- [ ] 6.1 Update `local-coop` proposal/design/specs/tasks for per-player death, revive next level, shared time (no shared lives)
-- [ ] 6.2 Update `game-documentation` proposal/design/specs/tasks for classic rules (time, one-hit, barriers, powers); defer writing README until after playable apply
+- [x] 6.1 Update `local-coop` proposal/design/specs/tasks for per-player death, revive next level, shared time (no shared lives)
+- [x] 6.2 Update `game-documentation` proposal/design/specs/tasks for classic rules (time, one-hit, barriers, powers); defer writing README until after playable apply

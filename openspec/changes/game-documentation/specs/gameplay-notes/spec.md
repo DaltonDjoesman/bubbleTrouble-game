@@ -1,22 +1,22 @@
 ## ADDED Requirements
 
 ### Requirement: Gameplay notes document
-The project SHALL include gameplay notes (e.g. `docs/gameplay.md`) describing the MVP rules.
+The project SHALL include gameplay notes (e.g. `docs/gameplay.md`) describing the classic rules.
 
 #### Scenario: Core loop documented
 - **WHEN** a reader opens the gameplay notes
-- **THEN** they can learn movement, shooting (multiple bullets, not a classic rope harpoon), ball split, lives, win, and game over
+- **THEN** they can learn grounded movement, time barrier, one-hit defeat (1P), shooting (harpoon / STICKY / DRILL), ball split, barriers/doors, win, and game over
 
-### Requirement: Explicit non-goals
-Gameplay notes SHALL list what is out of scope for the current MVP (including no level progression yet).
+### Requirement: Explicit scope
+Gameplay notes SHALL list current classic features and deferred work (e.g. local co-op implementation).
 
-#### Scenario: No levels called out
+#### Scenario: Classic features called out
 - **WHEN** a reader checks scope in the gameplay notes
-- **THEN** multi-level progression is listed as not in the current MVP
+- **THEN** time barrier, one-hit 1P, barriers/doors, powerups, and five levels are described as current rules
 
-### Requirement: Alignment with product decisions
-Gameplay notes SHALL reflect cyberpunk presentation intent and bullet-based combat rather than a classic Bubble Trouble harpoon.
+### Requirement: Alignment with classic product decisions
+Gameplay notes SHALL reflect cyberpunk presentation plus classic Bubble Trouble stakes (time, grounded, powers) rather than multi-life platform gameplay.
 
-#### Scenario: Combat model stated
-- **WHEN** a reader reads the combat section
-- **THEN** combat is described as upward (or configured) projectile shots using Craftpix bullet sprites
+#### Scenario: Combat and survival model stated
+- **WHEN** a reader reads the combat/survival sections
+- **THEN** survival is the time barrier (not lives), and weapons include default harpoon plus STICKY/DRILL pickups

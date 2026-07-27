@@ -27,9 +27,9 @@
 
 ## 5. Redesign five levels
 
-- [ ] 5.1 Author L1–L5 around open / barriers / timed doors / lane-clear / mix (no platforms)
-- [ ] 5.2 Set per-level `time_seconds`; verify advance refills time and resets weapon
-- [ ] 5.3 Manual smoke: clear each level path, time-out lose, one-hit lose, each power once
+- [x] 5.1 Author L1–L5 around open / barriers / timed doors / lane-clear / mix (no platforms)
+- [x] 5.2 Set per-level `time_seconds`; verify advance refills time and resets weapon
+- [x] 5.3 Manual smoke: clear each level path, time-out lose, one-hit lose, each power once
 
 ## 6. Sibling change alignment
 

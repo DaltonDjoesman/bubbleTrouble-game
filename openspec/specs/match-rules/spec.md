@@ -1,6 +1,6 @@
 ## Purpose
 
-Match lifecycle: lives, win/lose states, restart, and single-arena MVP scope.
+Match lifecycle: lives, win/lose states, restart, and multi-level campaign progress.
 
 ## Requirements
 
@@ -36,9 +36,9 @@ From won or game over, the player SHALL be able to return to the main menu (in a
 - **WHEN** the match is won or over and the player presses the menu-return key
 - **THEN** the main menu is shown
 
-### Requirement: No level progression in MVP
-The match SHALL NOT advance through multiple authored levels in this capability.
+### Requirement: Multi-level campaign progress
+Winning a non-final level SHALL progress the run; winning the final level SHALL complete the run with the won state.
 
-#### Scenario: Single arena
-- **WHEN** the player wins
-- **THEN** the game shows win/restart and does not load a second level
+#### Scenario: Mid-campaign clear
+- **WHEN** the last ball of a non-final level is destroyed
+- **THEN** the match does not permanently end the campaign without offering or performing advance to the next level

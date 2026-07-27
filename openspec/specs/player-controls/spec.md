@@ -39,3 +39,10 @@ The player SHALL be able to fire a laser with the Space key subject to projectil
 #### Scenario: Space fires
 - **WHEN** the player presses Space while allowed to shoot
 - **THEN** a laser is spawned from the player's position
+
+### Requirement: Player collides with platforms
+The player SHALL be supported by platform tops and blocked by obstacle solids horizontally as applicable.
+
+#### Scenario: Walk on platform
+- **WHEN** the player moves while standing on a platform
+- **THEN** they remain on the platform until walking off an edge or jumping/falling (if jump exists; otherwise walking off falls)

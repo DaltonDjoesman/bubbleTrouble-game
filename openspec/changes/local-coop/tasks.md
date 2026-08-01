@@ -5,9 +5,9 @@
 
 ## 2. Co-op match rules (classic contract)
 
-- [ ] 2.1 Spawn 1 or 2 players from menu mode; shared time barrier (no shared lives)
-- [ ] 2.2 Per-player bullet cap; both can hit balls; hit removes only that player from the level
-- [ ] 2.3 On level advance, respawn both players; game over if no living players or time empty; win on final clear
+- [x] 2.1 Spawn 1 or 2 players from menu mode; shared time barrier (no shared lives)
+- [x] 2.2 Per-player bullet cap; both can hit balls; hit removes only that player from the level
+- [x] 2.3 On level advance, respawn both players; game over if no living players or time empty; win on final clear
 
 ## 3. Menu and polish
 

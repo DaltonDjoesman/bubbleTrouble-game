@@ -15,7 +15,14 @@ class Bullet(pygame.sprite.Sprite):
       drill   — pierce balls; stop on solid/ceiling
     """
 
-    def __init__(self, x: int, base_y: int, mode: str = "harpoon") -> None:
+    def __init__(
+        self,
+        x: int,
+        base_y: int,
+        mode: str = "harpoon",
+        *,
+        owner_id: int = 1,
+    ) -> None:
         super().__init__()
         tip = load_image(BULLET_SPRITE)
         tw, th = tip.get_size()
@@ -30,6 +37,7 @@ class Bullet(pygame.sprite.Sprite):
 
         self.x = x
         self.base_y = base_y
+        self.owner_id = owner_id
         self.mode = mode if mode in ("harpoon", "sticky", "drill") else "harpoon"
         self.top = base_y - 1  # start with 1px height, grow upward
         self.planted = False  # sticky: finished growing, waiting for ball

@@ -25,6 +25,14 @@ from consts import (
     BULLET_COOLDOWN_MS,
     FPS,
     MAX_BULLETS,
+    P1_KEYS,
+    P1_SPAWN_X_OFFSET,
+    P2_IDLE_FRAMES,
+    P2_KEYS,
+    P2_RUN_FRAMES,
+    P2_SPAWN_X_OFFSET,
+    PLAYER_IDLE_FRAMES,
+    PLAYER_RUN_FRAMES,
     STICKY_MAX_ON_MAP,
     TIME_BAR_BG,
     TIME_BAR_EDGE,
@@ -88,7 +96,7 @@ class Game:
         )
 
         self.bolas = pygame.sprite.Group()
-        self.player = pygame.sprite.GroupSingle()
+        self.players = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
@@ -96,7 +104,7 @@ class Game:
         self.state = "menu"
         self.time_max = float(self.current_level.time_seconds)
         self.time_remaining = self.time_max
-        self.fire_cooldown_until = 0
+        self._fire_cooldown_until: dict[int, int] = {}
         self._end_sfx_played = False
         self._notice: str | None = None
         self._notice_until = 0
@@ -123,6 +131,36 @@ class Game:
         """TIME powerup: add seconds, clamped to this level's budget."""
         self.time_remaining = min(self.time_max, self.time_remaining + seconds)
 
+    def _living_players(self) -> list[Player]:
+        return [p for p in self.players if getattr(p, "alive", True)]
+
+    def _spawn_players(self) -> None:
+        """Spawn P1 (and P2 in co-op) on the floor baseline."""
+        base_x = self.current_level.player_x
+        coop = self.selected_mode == "2P"
+        p1_x = base_x + P1_SPAWN_X_OFFSET if coop else base_x
+        p1 = Player(
+            p1_x,
+            FLOOR_Y,
+            player_id=1,
+            keymap=P1_KEYS,
+            idle_frames=PLAYER_IDLE_FRAMES,
+            run_frames=PLAYER_RUN_FRAMES,
+        )
+        p1.weapon_mode = "harpoon"
+        self.players.add(p1)
+        if coop:
+            p2 = Player(
+                base_x + P2_SPAWN_X_OFFSET,
+                FLOOR_Y,
+                player_id=2,
+                keymap=P2_KEYS,
+                idle_frames=P2_IDLE_FRAMES,
+                run_frames=P2_RUN_FRAMES,
+            )
+            p2.weapon_mode = "harpoon"
+            self.players.add(p2)
+
     def reset_match(
         self,
         mode: str | None = None,
@@ -137,15 +175,11 @@ class Game:
         self.bullets.empty()
         self.effects.empty()
         self.powerups.empty()
-        self.player.empty()
-        self.fire_cooldown_until = 0
+        self.players.empty()
+        self._fire_cooldown_until = {}
         self.state = "playing"
         self._end_sfx_played = False
         self._level_clear_at = 0
-
-        # local-coop not shipped yet: 2P selection is stored but match is 1P.
-        if self.selected_mode == "2P":
-            self._show_notice("2P soon — starting 1P")
 
         self.current_level = get_level(self.selected_level)
         self.background = build_arena_background(self.current_level.theme)
@@ -155,9 +189,7 @@ class Game:
             door.reset(now)
         self._solids = collect_solids(self.current_level, self._doors)
         self._refill_time()
-        p = Player(self.current_level.player_x, FLOOR_Y)
-        p.weapon_mode = "harpoon"
-        self.player.add(p)
+        self._spawn_players()
         for spawn in self.current_level.balls:
             self.bolas.add(
                 Ball(
@@ -178,32 +210,35 @@ class Game:
         self.menu.level = next_id
         self.reset_match(mode=self.selected_mode, level_id=next_id)
 
-    def _try_fire(self) -> None:
-        if self.state != "playing":
+    def _try_fire(self, player: Player) -> None:
+        if self.state != "playing" or not getattr(player, "alive", True):
             return
         now = pygame.time.get_ticks()
-        if now < self.fire_cooldown_until:
-            return
-        p = self.player.sprite
-        if p is None:
+        pid = player.player_id
+        if now < self._fire_cooldown_until.get(pid, 0):
             return
 
-        mode = getattr(p, "weapon_mode", "harpoon")
+        mode = getattr(player, "weapon_mode", "harpoon")
         if mode == "sticky":
             # Unlimited fire rate (cooldown only); map keeps at most STICKY_MAX_ON_MAP
             pass
         else:
-            # Planted stickies do not consume harpoon/drill slots
-            active = sum(1 for b in self.bullets if getattr(b, "mode", "") != "sticky")
+            # Planted stickies do not consume harpoon/drill slots; cap is per-player
+            active = sum(
+                1
+                for b in self.bullets
+                if getattr(b, "owner_id", None) == pid
+                and getattr(b, "mode", "") != "sticky"
+            )
             if active >= MAX_BULLETS:
                 return
 
-        mx, my = p.muzzle
-        self.bullets.add(Bullet(mx, my, mode=mode))
+        mx, my = player.muzzle
+        self.bullets.add(Bullet(mx, my, mode=mode, owner_id=pid))
         if mode == "sticky":
             self._cull_extra_stickies()
         self.effects.add(ShootEffect(mx, my))
-        self.fire_cooldown_until = now + BULLET_COOLDOWN_MS
+        self._fire_cooldown_until[pid] = now + BULLET_COOLDOWN_MS
         self.audio.play_sfx("shoot")
 
     def _cull_extra_stickies(self) -> None:
@@ -226,29 +261,24 @@ class Game:
         if drop is not None:
             self.powerups.add(drop)
 
-    def _apply_powerup(self, power: Powerup) -> None:
-        p = self.player.sprite
+    def _apply_powerup(self, power: Powerup, player: Player) -> None:
         if power.kind == "TIME":
             self.add_time(TIME_POWER_SECONDS)
             self._show_notice(f"+{TIME_POWER_SECONDS}s", 1200)
             return
-        if p is None:
-            return
         if power.kind == "STICKY":
-            p.weapon_mode = "sticky"
-            self._show_notice("STICKY", 1200)
+            player.weapon_mode = "sticky"
+            self._show_notice(f"P{player.player_id} STICKY", 1200)
         elif power.kind == "DRILL":
-            p.weapon_mode = "drill"
-            self._show_notice("DRILL", 1200)
+            player.weapon_mode = "drill"
+            self._show_notice(f"P{player.player_id} DRILL", 1200)
 
     def _handle_powerup_pickups(self) -> None:
-        p = self.player.sprite
-        if p is None:
-            return
-        for power in list(self.powerups):
-            if p.hitbox.colliderect(power.rect):
-                self._apply_powerup(power)
-                power.kill()
+        for player in self._living_players():
+            for power in list(self.powerups):
+                if player.hitbox.colliderect(power.rect):
+                    self._apply_powerup(power, player)
+                    power.kill()
 
     def _handle_bullet_ball_hits(self) -> None:
         # Default/STICKY/DRILL diverge on whether the laser despawns on first hit
@@ -266,16 +296,20 @@ class Game:
             self._resolve_ball_hit(hit_balls[0])
             laser.kill()
 
-    def _handle_player_ball_hits(self) -> None:
-        p = self.player.sprite
-        if p is None:
-            return
-        hit = any(p.hitbox.colliderect(ball.rect) for ball in self.bolas)
-        if not hit:
-            return
+    def _remove_player_from_level(self, player: Player) -> None:
+        """Co-op: pull one player out of the current level; 1P → game over."""
+        player.alive = False
+        player.kill()
         self.audio.play_sfx("player_hit")
-        # Classic 1P: one hit → immediate game over
-        self.state = "game_over"
+        if self.selected_mode == "1P" or not self._living_players():
+            self.state = "game_over"
+        else:
+            self._show_notice(f"P{player.player_id} down", 1800)
+
+    def _handle_player_ball_hits(self) -> None:
+        for player in list(self._living_players()):
+            if any(player.hitbox.colliderect(ball.rect) for ball in self.bolas):
+                self._remove_player_from_level(player)
 
     def _drain_time(self) -> None:
         if self.state != "playing":
@@ -326,14 +360,31 @@ class Game:
                 _HUD_DIM,
             )
             self.screen.blit(label, (screenWidth - label.get_width() - 12, 12))
-            p = self.player.sprite
-            if p is not None and self.state == "playing":
+            living = self._living_players()
+            weapon_y = TIME_BAR_POS[1] + TIME_BAR_HEIGHT + 6
+            for p in sorted(living, key=lambda pl: pl.player_id):
                 mode = getattr(p, "weapon_mode", "harpoon").upper()
-                if mode != "HARPOON":
-                    wlabel = self.font.render(mode, True, _NEON_CYAN)
+                if mode == "HARPOON":
+                    continue
+                prefix = f"P{p.player_id} " if self.selected_mode == "2P" else ""
+                wlabel = self.font.render(f"{prefix}{mode}", True, _NEON_CYAN)
+                self.screen.blit(wlabel, (TIME_BAR_POS[0], weapon_y))
+                weapon_y += 22
+            if self.selected_mode == "2P" and self.state == "playing":
+                down_ids = [
+                    pid
+                    for pid in (1, 2)
+                    if not any(p.player_id == pid for p in living)
+                ]
+                if down_ids:
+                    hint = self.font.render(
+                        " · ".join(f"P{pid} down" for pid in down_ids),
+                        True,
+                        _NEON_MAGENTA,
+                    )
                     self.screen.blit(
-                        wlabel,
-                        (TIME_BAR_POS[0], TIME_BAR_POS[1] + TIME_BAR_HEIGHT + 6),
+                        hint,
+                        (TIME_BAR_POS[0], screenHeight - 36),
                     )
 
         if self.state in ("won", "game_over", "level_clear"):
@@ -371,7 +422,7 @@ class Game:
         self.bullets.empty()
         self.effects.empty()
         self.powerups.empty()
-        self.player.empty()
+        self.players.empty()
         self._end_sfx_played = False
         self._notice = None
         self.menu.mode = self.selected_mode
@@ -409,8 +460,11 @@ class Game:
                                 mode=self.selected_mode,
                                 level_id=self.selected_level,
                             )
-                    elif event.key == pygame.K_SPACE and self.state == "playing":
-                        self._try_fire()
+                    elif self.state == "playing":
+                        for player in self._living_players():
+                            if event.key == player.fire_key:
+                                self._try_fire(player)
+                                break
                     elif (
                         event.key in (pygame.K_RETURN, pygame.K_SPACE)
                         and self.state == "level_clear"
@@ -462,7 +516,7 @@ class Game:
                     self.bullets.update(self._solids)
                     self.effects.update()
                     self.powerups.update()
-                    self.player.update(self._solids)
+                    self.players.update(self._solids)
                     self._handle_bullet_ball_hits()
                     self._handle_powerup_pickups()
                     self._handle_player_ball_hits()
@@ -474,8 +528,7 @@ class Game:
                 self.bullets.draw(self.screen)
                 self.effects.draw(self.screen)
                 self.powerups.draw(self.screen)
-                if self.player.sprite is not None:
-                    self.player.draw(self.screen)
+                self.players.draw(self.screen)
 
                 self._draw_hud()
                 self._draw_notice(now)

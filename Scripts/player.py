@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Mapping
+
 import pygame
 
 from assets import load_image, load_strip_frames
@@ -7,6 +10,7 @@ from consts import (
     GUN_HAND_Y_FRAC,
     GUN_SCALE,
     GUN_SPRITE,
+    P1_KEYS,
     PLAYER_HITBOX_INSET,
     PLAYER_IDLE_FRAMES,
     PLAYER_RUN_FRAMES,
@@ -18,12 +22,48 @@ from consts import (
 
 FLOOR_Y = screenHeight - 4
 
+# pygame.key.get_pressed() indices for named keys
+_KEY_NAME_TO_CODE: dict[str, int] = {
+    "a": pygame.K_a,
+    "d": pygame.K_d,
+    "space": pygame.K_SPACE,
+    "left": pygame.K_LEFT,
+    "right": pygame.K_RIGHT,
+    "return": pygame.K_RETURN,
+    "rctrl": pygame.K_RCTRL,
+}
+
+
+def resolve_key(name: str) -> int:
+    """Map a keymap string to a pygame key constant."""
+    code = _KEY_NAME_TO_CODE.get(name.lower())
+    if code is None:
+        raise KeyError(f"Unknown key name: {name!r}")
+    return code
+
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x: int, y: int) -> None:
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        *,
+        player_id: int = 1,
+        keymap: Mapping[str, str] | None = None,
+        idle_frames: list[Path] | None = None,
+        run_frames: list[Path] | None = None,
+    ) -> None:
         super().__init__()
-        self.idle_sprites = load_strip_frames(PLAYER_IDLE_FRAMES, scale=PLAYER_SCALE)
-        self.run_sprites = load_strip_frames(PLAYER_RUN_FRAMES, scale=PLAYER_SCALE)
+        self.player_id = player_id
+        self.keymap = dict(keymap if keymap is not None else P1_KEYS)
+        self._key_left = resolve_key(self.keymap["left"])
+        self._key_right = resolve_key(self.keymap["right"])
+        self._key_fire = resolve_key(self.keymap["fire"])
+
+        idle_paths = idle_frames if idle_frames is not None else PLAYER_IDLE_FRAMES
+        run_paths = run_frames if run_frames is not None else PLAYER_RUN_FRAMES
+        self.idle_sprites = load_strip_frames(idle_paths, scale=PLAYER_SCALE)
+        self.run_sprites = load_strip_frames(run_paths, scale=PLAYER_SCALE)
         # Left-facing hold looks correct; right-facing uses a horizontal mirror
         self._gun_left = self._load_gun_overlay()
         self._gun_right = pygame.transform.flip(self._gun_left, True, False)
@@ -32,11 +72,16 @@ class Player(pygame.sprite.Sprite):
         self.index_speed = 0.15
         self.vel_x = PLAYER_VEL_X
         self.weapon_mode = "harpoon"
+        self.alive = True
         self.muzzle = (x, y)
         self.image = self.idle_sprites[0]
         self.rect = self.image.get_rect(midbottom=(x, min(y, FLOOR_Y)))
         self._compose_with_gun(self.idle_sprites[0])
         self.hitbox = self._compute_hitbox()
+
+    @property
+    def fire_key(self) -> int:
+        return self._key_fire
 
     @staticmethod
     def _load_gun_overlay() -> pygame.Surface:
@@ -132,16 +177,18 @@ class Player(pygame.sprite.Sprite):
         self._apply_body_box(box)
 
     def update(self, solids: list[pygame.Rect] | None = None) -> None:
+        if not self.alive:
+            return
         solids = solids or []
         dx = 0
         keys = pygame.key.get_pressed()
         moving = False
 
-        if keys[pygame.K_d]:
+        if keys[self._key_right]:
             dx += self.vel_x
             self.facing_right = True
             moving = True
-        elif keys[pygame.K_a]:
+        elif keys[self._key_left]:
             dx -= self.vel_x
             self.facing_right = False
             moving = True

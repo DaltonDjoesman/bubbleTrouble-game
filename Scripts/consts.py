@@ -46,6 +46,7 @@ CRAFTPIX = (
 )
 
 CYBORG_DIR = CRAFTPIX / "1 Characters" / "3 Cyborg"
+BIKER_DIR = CRAFTPIX / "1 Characters" / "1 Biker"
 GUNS_DIR = CRAFTPIX / "2 Guns"
 BULLETS_DIR = CRAFTPIX / "5 Bullets"
 SHOOT_EFFECTS_DIR = CRAFTPIX / "4 Shoot_effects"
@@ -63,6 +64,32 @@ PLAYER_JUMP_FRAMES = [
     CYBORG_DIR / "Jump1.png",
     CYBORG_DIR / "Jump2.png",
 ]
+
+# P2 (Biker) — co-op
+P2_IDLE_FRAMES = [
+    BIKER_DIR / "Idle1.png",
+    BIKER_DIR / "Idle2.png",
+]
+P2_RUN_FRAMES = [
+    BIKER_DIR / "Run1.png",
+    BIKER_DIR / "Run2.png",
+]
+
+# Keymaps: left / right / fire (grounded; no jump)
+P1_KEYS = {
+    "left": "a",
+    "right": "d",
+    "fire": "space",
+}
+P2_KEYS = {
+    "left": "left",
+    "right": "right",
+    "fire": "return",
+}
+
+# Co-op spawn offsets from arena center (floor baseline)
+P1_SPAWN_X_OFFSET = -120
+P2_SPAWN_X_OFFSET = 120
 
 # Compact pistol (set 4) — small upward hold that doesn't cover the body
 GUN_SPRITE = GUNS_DIR / "4_1.png"

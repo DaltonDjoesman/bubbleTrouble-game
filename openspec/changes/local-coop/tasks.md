@@ -1,7 +1,7 @@
 ## 1. Player parametrization
 
-- [ ] 1.1 Refactor `Player` to accept player id, keymap, and sprite set (grounded; no jump)
-- [ ] 1.2 Add P2 sprites (Biker or Punk) and P2 keys (arrows + fire)
+- [x] 1.1 Refactor `Player` to accept player id, keymap, and sprite set (grounded; no jump)
+- [x] 1.2 Add P2 sprites (Biker or Punk) and P2 keys (arrows + fire)
 
 ## 2. Co-op match rules (classic contract)
 

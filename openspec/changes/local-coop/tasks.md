@@ -11,6 +11,6 @@
 
 ## 3. Menu and polish
 
-- [ ] 3.1 Menu 2P Play starts real co-op (no 1P fallback)
-- [ ] 3.2 Playtest co-op on a barrier/door level; document controls in overlay/menu hint
-- [ ] 3.3 Manual smoke: 1P one-hit/time still works; 2P both move/shoot; one dies partner continues; both revive next level
+- [x] 3.1 Menu 2P Play starts real co-op (no 1P fallback)
+- [x] 3.2 Playtest co-op on a barrier/door level; document controls in overlay/menu hint
+- [x] 3.3 Manual smoke: 1P one-hit/time still works; 2P both move/shoot; one dies partner continues; both revive next level

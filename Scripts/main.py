@@ -190,6 +190,8 @@ class Game:
         self._solids = collect_solids(self.current_level, self._doors)
         self._refill_time()
         self._spawn_players()
+        if self.selected_mode == "2P":
+            self._show_notice("P1 A/D Space · P2 ←→ Enter", 2800)
         for spawn in self.current_level.balls:
             self.bolas.add(
                 Ball(

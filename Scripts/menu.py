@@ -80,10 +80,13 @@ class MainMenu:
             return items
         return [
             ("play", "Play"),
-            ("mode", f"Mode    {self.mode}"),
+            ("mode", f"Mode    {self.mode_label()}"),
             ("options", "Options"),
             ("quit", "Quit"),
         ]
+
+    def mode_label(self) -> str:
+        return "2P Co-op" if self.mode == "2P" else "1P"
 
     def _enter_options(self) -> None:
         self._root_selected = self.selected
@@ -229,7 +232,7 @@ class MainMenu:
 
             if kind in ("mode", "music", "sfx"):
                 if kind == "mode":
-                    name, value = "Mode", self.mode
+                    name, value = "Mode", self.mode_label()
                 elif kind == "music":
                     name = "Music"
                     value = f"{self.audio.music_volume if self.audio else 0}/{VOLUME_MAX}"
@@ -324,7 +327,25 @@ class MainMenu:
 
 
     def _draw_hints(self, screen: pygame.Surface) -> None:
-        """Footer: control legend; Esc on submenus."""
+        """Footer: control legend; Esc on submenus; co-op keys on root."""
+        if self.screen == "root":
+            if self.mode == "2P":
+                coop = self.font.render(
+                    "P1  A/D + Space   ·   P2  ←/→ + Enter",
+                    True,
+                    _HINT_DIM,
+                )
+            else:
+                coop = self.font.render(
+                    "A/D mover  ·  Space disparar",
+                    True,
+                    _HINT_DIM,
+                )
+            screen.blit(
+                coop,
+                coop.get_rect(center=(screenWidth // 2, screenHeight - 68)),
+            )
+
         y = screenHeight - 40
         parts: list[tuple[str, str | None]] = [
             ("nav", None),

@@ -33,6 +33,7 @@ class Bullet(pygame.sprite.Sprite):
         self.mode = mode if mode in ("harpoon", "sticky", "drill") else "harpoon"
         self.top = base_y - 1  # start with 1px height, grow upward
         self.planted = False  # sticky: finished growing, waiting for ball
+        self.spawned_at = pygame.time.get_ticks()
         self._rebuild()
 
     def _rebuild(self) -> None:

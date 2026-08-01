@@ -25,6 +25,7 @@ from consts import (
     BULLET_COOLDOWN_MS,
     FPS,
     MAX_BULLETS,
+    STICKY_MAX_ON_MAP,
     TIME_BAR_BG,
     TIME_BAR_EDGE,
     TIME_BAR_FILL,
@@ -188,21 +189,32 @@ class Game:
             return
 
         mode = getattr(p, "weapon_mode", "harpoon")
-        # STICKY: at most one sticky line (growing or planted)
         if mode == "sticky":
-            if any(getattr(b, "mode", "") == "sticky" for b in self.bullets):
-                return
+            # Unlimited fire rate (cooldown only); map keeps at most STICKY_MAX_ON_MAP
+            pass
         else:
-            # Planted sticky does not consume the harpoon/drill slot cap
+            # Planted stickies do not consume harpoon/drill slots
             active = sum(1 for b in self.bullets if getattr(b, "mode", "") != "sticky")
             if active >= MAX_BULLETS:
                 return
 
         mx, my = p.muzzle
         self.bullets.add(Bullet(mx, my, mode=mode))
+        if mode == "sticky":
+            self._cull_extra_stickies()
         self.effects.add(ShootEffect(mx, my))
         self.fire_cooldown_until = now + BULLET_COOLDOWN_MS
         self.audio.play_sfx("shoot")
+
+    def _cull_extra_stickies(self) -> None:
+        """Keep only the newest STICKY_MAX_ON_MAP sticky lasers on the map."""
+        stickies = sorted(
+            (b for b in self.bullets if getattr(b, "mode", "") == "sticky"),
+            key=lambda b: getattr(b, "spawned_at", 0),
+        )
+        overflow = len(stickies) - STICKY_MAX_ON_MAP
+        for old in stickies[: max(0, overflow)]:
+            old.kill()
 
     def _resolve_ball_hit(self, ball: Ball) -> None:
         cx, cy = ball.rect.center

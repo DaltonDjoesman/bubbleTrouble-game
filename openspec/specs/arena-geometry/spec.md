@@ -1,19 +1,27 @@
 ## Purpose
 
-Solid arena geometry: platforms and obstacles that support the player and interact with balls and bullets.
+Solid arena geometry: vertical barriers and doors that interact with balls and lasers (crawl gaps for the player).
 
 ## Requirements
 
-### Requirement: Platforms
-Platforms SHALL be solid surfaces. The player can stand on them. Balls bounce when colliding with them according to arena physics rules.
+### Requirement: Barriers
+Barriers SHALL be static solid vertical (or block) geometry. Balls bounce on contact. Lasers that hit a barrier SHALL despawn (or stop growth) and SHALL NOT pass through. Barriers intended as lanes SHALL leave a floor crawl gap so the player can move underneath.
 
-#### Scenario: Player stands on platform
-- **WHEN** the player falls onto a platform top
-- **THEN** the player rests on that platform instead of falling through
+#### Scenario: Ball blocked by barrier
+- **WHEN** a ball collides with a barrier
+- **THEN** the ball bounces and does not pass through
 
-### Requirement: Obstacles
-Obstacles SHALL block the player and interact with balls and bullets as solid geometry (bullets despawn on impact with solid arena geometry).
+#### Scenario: Laser blocked by barrier
+- **WHEN** a laser collides with a barrier
+- **THEN** the laser does not continue through the barrier
 
-#### Scenario: Bullet hits obstacle
-- **WHEN** a bullet collides with an obstacle or platform underside/solid
-- **THEN** the bullet is removed
+### Requirement: Doors
+Doors SHALL behave as solid barriers while closed and non-solid while open. Each door SHALL use an authored mode: timed open/close cycle, and/or open when its lane is clear of balls.
+
+#### Scenario: Timed door closes
+- **WHEN** a timed door's closed phase is active
+- **THEN** balls and lasers treat it as solid
+
+#### Scenario: Lane-clear door opens
+- **WHEN** a lane-clear door's lane has no remaining balls
+- **THEN** the door is open (non-solid)

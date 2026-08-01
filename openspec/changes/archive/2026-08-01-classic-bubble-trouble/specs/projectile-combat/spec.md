@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: STICKY weapon behavior
-While STICKY mode is active, firing SHALL plant at most one sticky laser. After growing into place, the sticky laser SHALL remain until a ball collides with it. On that collision, the ball SHALL be resolved (split/remove) and the sticky laser SHALL despawn. Changing weapon mode SHALL NOT remove an already planted sticky laser.
+While STICKY mode is active, the player SHALL be able to fire without an active-laser slot limit (normal fire cooldown still applies). After growing into place, each sticky laser SHALL remain until a ball collides with it. On that collision, the ball SHALL be resolved (split/remove) and that sticky laser SHALL despawn. At most three sticky lasers SHALL remain on the map; firing beyond that SHALL remove the oldest sticky. Changing weapon mode SHALL NOT remove already planted sticky lasers.
 
 #### Scenario: Sticky stays
 - **WHEN** a sticky laser has finished growing and no ball has hit it
@@ -11,9 +11,9 @@ While STICKY mode is active, firing SHALL plant at most one sticky laser. After 
 - **WHEN** a ball intersects a planted sticky laser
 - **THEN** the ball is processed for split or removal and the sticky laser is removed
 
-#### Scenario: One sticky max
-- **WHEN** a sticky laser is already planted
-- **THEN** the player cannot plant a second sticky until the first is gone
+#### Scenario: Unlimited sticky fire with map cap
+- **WHEN** sticky mode is active and the player fires repeatedly
+- **THEN** shots are not blocked by the harpoon/drill laser cap, and at most three sticky lasers remain on the map (oldest culled)
 
 ### Requirement: DRILL weapon behavior
 While DRILL mode is active, a fired laser SHALL pass through balls along its vertical path, resolving each ball it intersects, until blocked by a barrier, closed door, or the ceiling.

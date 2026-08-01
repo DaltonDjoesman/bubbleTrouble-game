@@ -1,15 +1,19 @@
 ## Purpose
 
-On-screen HUD for lives and clear win / game over messaging with restart guidance.
+On-screen HUD for the time barrier and clear win / game over messaging with restart guidance.
 
 ## Requirements
 
 ### Requirement: Lives display
-While playing, the HUD SHALL show the current remaining lives **using life sprites** (not only a numeric text label).
+While playing, the HUD SHALL show the time barrier (remaining time as a fill bar). The HUD SHALL NOT show a multi-life stock or life-capsule lives display during play.
 
-#### Scenario: Lives visible as sprites
+#### Scenario: Time barrier visible
 - **WHEN** the match is in the playing state
-- **THEN** remaining lives are represented by visible life sprites on screen
+- **THEN** a time barrier fill representing remaining time is visible on screen
+
+#### Scenario: No life icons in play
+- **WHEN** the match is in the playing state
+- **THEN** remaining-lives sprites are not shown as the survival meter
 
 ### Requirement: End-state messaging
 Win and game over states SHALL show clear on-screen text including how to restart.

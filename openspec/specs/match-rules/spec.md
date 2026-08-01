@@ -1,25 +1,50 @@
 ## Purpose
 
-Match lifecycle: lives, win/lose states, restart, and multi-level campaign progress.
+Match lifecycle: time barrier, one-hit (1P) / co-op death contract, win/lose states, restart, and multi-level campaign progress.
 
 ## Requirements
 
+### Requirement: Time barrier
+Each level SHALL start with a full time barrier equal to that level's `time_seconds`. Time SHALL drain at a fixed global rate while playing. When remaining time reaches zero, the match SHALL enter game over immediately.
+
+#### Scenario: Level starts full
+- **WHEN** a level loads into playing state
+- **THEN** the time barrier is full for that level's budget
+
+#### Scenario: Time expires
+- **WHEN** remaining time reaches zero while balls remain
+- **THEN** the match enters game over and playing updates stop
+
+### Requirement: One-hit defeat in single-player
+In single-player, colliding with a ball while playing SHALL immediately end the match in game over (no multi-life stock, no mid-level continue).
+
+#### Scenario: Ball touch ends run
+- **WHEN** the single player collides with a ball while vulnerable in playing state
+- **THEN** the match enters game over
+
+### Requirement: Co-op hit and revive contract
+When local co-op is active, a ball hit SHALL remove only the hit player from the current level; the other player MAY continue. Advancing to the next level SHALL respawn both players. If no players remain alive in the level, or the shared time barrier empties, the match SHALL game over.
+
+#### Scenario: Partner continues
+- **WHEN** P1 is hit by a ball and P2 is still alive
+- **THEN** P1 is removed from play and P2 continues with the shared time barrier
+
+#### Scenario: Both return next level
+- **WHEN** the level is cleared while at least one co-op player was alive
+- **THEN** both players are present again at the start of the next level
+
 ### Requirement: Lives and player-ball collision
-The match SHALL track lives (default 3). Colliding with a ball costs one life.
+The match SHALL NOT use a multi-life stock. Single-player ball collision follows one-hit defeat. Co-op follows the co-op hit and revive contract.
 
-#### Scenario: Lose a life
-- **WHEN** the player collides with a ball while vulnerable and has lives remaining after the hit
-- **THEN** lives decrease by one and the match continues with a brief recovery (i-frames and/or position reset)
-
-#### Scenario: Game over
-- **WHEN** lives reach zero after a ball collision
-- **THEN** the match enters the game over state and playing updates stop
+#### Scenario: No life decrement loop
+- **WHEN** the single player collides with a ball while playing
+- **THEN** the match does not continue on the same level with reduced lives
 
 ### Requirement: Win by clearing balls
-The match SHALL enter the won state when no balls remain.
+Clearing all balls on the final level SHALL enter the won state. Clearing a non-final level SHALL advance per multi-level campaign progress (not a permanent campaign win).
 
-#### Scenario: Arena cleared
-- **WHEN** the last ball is destroyed
+#### Scenario: Final arena cleared
+- **WHEN** the last ball of the final level is destroyed
 - **THEN** the match enters the won state
 
 ### Requirement: Restart from end states
@@ -27,7 +52,7 @@ From won or game over, the player SHALL be able to restart a fresh match with a 
 
 #### Scenario: Restart
 - **WHEN** the match is won or over and the player presses the restart key (R)
-- **THEN** lives and balls reset to the initial arena setup and play resumes
+- **THEN** time budget, balls, geometry, weapon mode, and player state reset to the selected level's initial setup and play resumes
 
 ### Requirement: Return to menu after match
 From won or game over, the player SHALL be able to return to the main menu (in addition to any retry control).

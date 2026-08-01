@@ -9,7 +9,7 @@ The current build drifts from classic Bubble Trouble: jump + platforms + multi-l
 - **BREAKING**: Remove multi-life system and life HUD/barrier; one hit in single-player ends the match
 - Add a **time barrier** (shared countdown bar): full at level start, fixed drain rate, empty = instant lose; levels may set different starting seconds
 - Add **powerups** dropped at random on ball kills: TIME (+seconds), STICKY (weapon mode), DRILL (weapon mode); only one weapon at a time; default = current growing harpoon
-- STICKY: shot plants one vertical line that stays until a ball hits it (then ball resolves and line despawns); max one planted sticky
+- STICKY: unlimited fire (cooldown only); at most 3 lines stay on the map (oldest replaced); ball hit resolves + despawns that line
 - DRILL: shot passes through all balls on that vertical line (barriers/doors still solid)
 - Barriers/doors are solid for balls and lasers; door open rules vary per door (timed cycle and/or open when lane clear)
 - Co-op rules (for when `local-coop` lands): hit removes that player only; partner continues; both respawn on next level; shared time bar; both dead or time empty = game over

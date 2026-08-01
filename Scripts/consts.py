@@ -9,7 +9,8 @@ screenHeight = 600
 FPS = 60
 GRAVITY = 0.3
 
-MAX_BULLETS = 2  # max active lasers
+MAX_BULLETS = 2  # max active lasers (harpoon / drill)
+STICKY_MAX_ON_MAP = 3  # planted/growing stickies kept on the arena
 BULLET_COOLDOWN_MS = 150
 LASER_GROW_SPEED = 10
 LASER_WIDTH = 6

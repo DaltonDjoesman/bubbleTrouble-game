@@ -49,7 +49,7 @@ Sibling open changes `local-coop` and `game-documentation` still assume lives/pl
 
 5. **Weapons**  
    - Default: current growing harpoon (despawn on ceiling or first ball hit). Cap unchanged unless sticky/drill need tighter rules.  
-   - STICKY mode: fire plants at most one sticky line; grows then stays; ball hit → resolve ball + remove line. Switching weapon does **not** despawn an already planted sticky.  
+   - STICKY mode: fire without slot limit (cooldown only); at most 3 stickies on the map (oldest culled); grows then stays; ball hit → resolve ball + remove that line. Switching weapon does **not** despawn already planted stickies.  
    - DRILL mode: one shot pierces every ball whose rect intersects the beam’s vertical path until blocked by closed barrier/door or ceiling; beam does not stop on first ball.  
    Pickup replaces current weapon mode immediately. TIME is not a weapon — applies instantly and leaves mode unchanged.
 

@@ -52,6 +52,7 @@ class Player(pygame.sprite.Sprite):
         keymap: Mapping[str, str] | None = None,
         idle_frames: list[Path] | None = None,
         run_frames: list[Path] | None = None,
+        gun_sprite: Path | None = None,
     ) -> None:
         super().__init__()
         self.player_id = player_id
@@ -65,7 +66,7 @@ class Player(pygame.sprite.Sprite):
         self.idle_sprites = load_strip_frames(idle_paths, scale=PLAYER_SCALE)
         self.run_sprites = load_strip_frames(run_paths, scale=PLAYER_SCALE)
         # Left-facing hold looks correct; right-facing uses a horizontal mirror
-        self._gun_left = self._load_gun_overlay()
+        self._gun_left = self._load_gun_overlay(gun_sprite if gun_sprite is not None else GUN_SPRITE)
         self._gun_right = pygame.transform.flip(self._gun_left, True, False)
         self.facing_right = True
         self.index = 0.0
@@ -84,8 +85,8 @@ class Player(pygame.sprite.Sprite):
         return self._key_fire
 
     @staticmethod
-    def _load_gun_overlay() -> pygame.Surface:
-        gun = load_image(GUN_SPRITE, scale=GUN_SCALE)
+    def _load_gun_overlay(gun_path: Path) -> pygame.Surface:
+        gun = load_image(gun_path, scale=GUN_SCALE)
         # Craftpix guns face right; +90° CCW → barrel up
         return pygame.transform.rotate(gun, 90)
 

@@ -61,3 +61,10 @@ The player SHALL be able to fire a laser with the Space key subject to projectil
 #### Scenario: Space fires
 - **WHEN** the player presses Space while allowed to shoot
 - **THEN** a laser is spawned from the player's position
+
+### Requirement: Per-player control schemes
+The player system SHALL support multiple instances with independent keymaps and facing/animation. All co-op players SHALL stay on the floor baseline (no jump).
+
+#### Scenario: Instantiate P2 scheme
+- **WHEN** a second player is spawned for co-op
+- **THEN** that instance responds only to the P2 keymap and remains grounded

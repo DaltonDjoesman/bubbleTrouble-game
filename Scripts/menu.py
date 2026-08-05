@@ -80,13 +80,10 @@ class MainMenu:
             return items
         return [
             ("play", "Play"),
-            ("mode", f"Mode    {self.mode_label()}"),
+            ("mode", f"Mode    {self.mode}"),
             ("options", "Options"),
             ("quit", "Quit"),
         ]
-
-    def mode_label(self) -> str:
-        return "2P Co-op" if self.mode == "2P" else "1P"
 
     def _enter_options(self) -> None:
         self._root_selected = self.selected
@@ -232,7 +229,7 @@ class MainMenu:
 
             if kind in ("mode", "music", "sfx"):
                 if kind == "mode":
-                    name, value = "Mode", self.mode_label()
+                    name, value = "Mode", self.mode
                 elif kind == "music":
                     name = "Music"
                     value = f"{self.audio.music_volume if self.audio else 0}/{VOLUME_MAX}"
@@ -329,22 +326,7 @@ class MainMenu:
     def _draw_hints(self, screen: pygame.Surface) -> None:
         """Footer: control legend; Esc on submenus; co-op keys on root."""
         if self.screen == "root":
-            if self.mode == "2P":
-                coop = self.font.render(
-                    "P1  A/D + Space   ·   P2  ←/→ + Enter",
-                    True,
-                    _HINT_DIM,
-                )
-            else:
-                coop = self.font.render(
-                    "A/D mover  ·  Space disparar",
-                    True,
-                    _HINT_DIM,
-                )
-            screen.blit(
-                coop,
-                coop.get_rect(center=(screenWidth // 2, screenHeight - 68)),
-            )
+            self._draw_play_controls(screen)
 
         y = screenHeight - 40
         parts: list[tuple[str, str | None]] = [
@@ -404,6 +386,43 @@ class MainMenu:
                 surf = self.font.render(payload or "", True, _HINT_DIM)
                 screen.blit(surf, surf.get_rect(midleft=(x, y)))
             x += w + gap
+
+    def _draw_play_controls(self, screen: pygame.Surface) -> None:
+        """Gameplay key legend above the nav footer (drawn arrows, not Unicode)."""
+        y = screenHeight - 68
+        if self.mode == "2P":
+            # Measure: "P1  A/D + Space   ·   P2  <> + Enter"
+            p1 = self.font.render("P1  A/D + Space", True, _HINT_DIM)
+            sep = self.font.render("·", True, _HINT_DIM)
+            p2_pre = self.font.render("P2", True, _HINT_DIM)
+            p2_post = self.font.render("+ Enter", True, _HINT_DIM)
+            arrow_cluster = 28
+            gap = 10
+            total = (
+                p1.get_width()
+                + gap
+                + sep.get_width()
+                + gap
+                + p2_pre.get_width()
+                + 8
+                + arrow_cluster
+                + 8
+                + p2_post.get_width()
+            )
+            x = (screenWidth - total) // 2
+            screen.blit(p1, p1.get_rect(midleft=(x, y)))
+            x += p1.get_width() + gap
+            screen.blit(sep, sep.get_rect(center=(x + sep.get_width() // 2, y)))
+            x += sep.get_width() + gap
+            screen.blit(p2_pre, p2_pre.get_rect(midleft=(x, y)))
+            x += p2_pre.get_width() + 8
+            self._draw_arrow_left(screen, x + 6, y, 10, _NEON_CYAN)
+            self._draw_arrow_right(screen, x + 20, y, 10, _NEON_CYAN)
+            x += arrow_cluster + 8
+            screen.blit(p2_post, p2_post.get_rect(midleft=(x, y)))
+        else:
+            line = self.font.render("A/D mover  ·  Space disparar", True, _HINT_DIM)
+            screen.blit(line, line.get_rect(center=(screenWidth // 2, y)))
 
     @staticmethod
     def _draw_arrow_up(surf: pygame.Surface, cx: int, cy: int, size: int, color: tuple) -> None:

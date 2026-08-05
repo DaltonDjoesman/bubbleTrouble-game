@@ -91,8 +91,9 @@ P2_KEYS = {
 P1_SPAWN_X_OFFSET = -120
 P2_SPAWN_X_OFFSET = 120
 
-# Compact pistol (set 4) — small upward hold that doesn't cover the body
+# Compact pistol (set 4) — P1; set 3 for P2 visual distinction
 GUN_SPRITE = GUNS_DIR / "4_1.png"
+P2_GUN_SPRITE = GUNS_DIR / "3_1.png"
 BULLET_SPRITE = BULLETS_DIR / "4_1.png"
 # Shoot-effect strips are 48×48 cells — load via strip cutter, not whole PNG
 SHOOT_EFFECT_FRAMES = [

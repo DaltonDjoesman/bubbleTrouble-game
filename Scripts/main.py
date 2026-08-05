@@ -31,6 +31,7 @@ from consts import (
     P2_KEYS,
     P2_RUN_FRAMES,
     P2_SPAWN_X_OFFSET,
+    P2_GUN_SPRITE,
     PLAYER_IDLE_FRAMES,
     PLAYER_RUN_FRAMES,
     STICKY_MAX_ON_MAP,
@@ -157,6 +158,7 @@ class Game:
                 keymap=P2_KEYS,
                 idle_frames=P2_IDLE_FRAMES,
                 run_frames=P2_RUN_FRAMES,
+                gun_sprite=P2_GUN_SPRITE,
             )
             p2.weapon_mode = "harpoon"
             self.players.add(p2)
@@ -191,7 +193,7 @@ class Game:
         self._refill_time()
         self._spawn_players()
         if self.selected_mode == "2P":
-            self._show_notice("P1 A/D Space · P2 ←→ Enter", 2800)
+            self._show_notice("P1 A/D Space · P2 arrows Enter", 2800)
         for spawn in self.current_level.balls:
             self.bolas.add(
                 Ball(
@@ -397,7 +399,7 @@ class Game:
         if self.state == "level_clear":
             msg = self.big_font.render("LEVEL CLEAR", True, _NEON_CYAN)
             hint = self.font.render(
-                f"Enter → Level {self.selected_level + 1} · M menu",
+                f"Enter -> Level {self.selected_level + 1} · M menu",
                 True,
                 _HUD_DIM,
             )

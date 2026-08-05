@@ -1,22 +1,4 @@
-## Purpose
-
-Cyberpunk visual identity for the player, arena, and projectile feedback using the Craftpix asset pack (player/guns/effects) plus chain-link harpoon shafts.
-
-## Requirements
-
-### Requirement: Cyberpunk player presentation
-The player SHALL be rendered using the Craftpix Cyborg character frames as the default look.
-
-#### Scenario: Cyborg on screen
-- **WHEN** a match is playing
-- **THEN** the player sprite is sourced from the Cyborg asset set (not the Knight sheets)
-
-### Requirement: Themed arena background
-The play field SHALL not be a flat black fill; it SHALL use a cyberpunk-appropriate background treatment.
-
-#### Scenario: Non-plain background
-- **WHEN** the game draws a playing frame
-- **THEN** the background presents a gradient, pattern, or image consistent with the cyberpunk theme
+## MODIFIED Requirements
 
 ### Requirement: Bullet and muzzle feedback
 Shots SHALL use a tiled vertical chain-link shaft for the growing projectile body, topped by an arrow/harpoon head sprite. The default (harpoon) shaft SHALL be a light gray steel tint. Sticky and drill modes SHALL tint the chain shaft (green / amber) while the arrow head SHALL remain gray in every mode. Shots SHOULD show a brief shoot effect when firing (Craftpix shoot effects remain allowed).

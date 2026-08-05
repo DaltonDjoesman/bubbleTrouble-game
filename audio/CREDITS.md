@@ -7,7 +7,7 @@ crediting Kenney is appreciated.
 | File | Source pack |
 |------|-------------|
 | `music/bgm.ogg` | Music Loops — “Space Cadet” |
-| `sfx/shoot.ogg` | Sci-Fi Sounds — `laserRetro_000` |
+| `sfx/shoot.ogg` | RPG Audio — mix of `metalLatch` + `metalClick` (chain deploy) |
 | `sfx/ball_pop.ogg` | Sci-Fi Sounds — `explosionCrunch_000` |
 | `sfx/player_hit.ogg` | Sci-Fi Sounds — `impactMetal_000` |
 | `sfx/win.ogg` | Music Jingles (Retro) — `jingles-retro_12` |

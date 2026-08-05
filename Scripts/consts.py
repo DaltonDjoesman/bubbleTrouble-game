@@ -96,6 +96,7 @@ GUN_SPRITE = GUNS_DIR / "4_1.png"
 P2_GUN_SPRITE = GUNS_DIR / "3_1.png"
 # Growing harpoon shaft — tileable vertical chain link (not Craftpix bullet)
 CHAIN_LINK_SPRITE = PROJECT_ROOT / "sprites" / "chain" / "DragChainLinkVertical.png"
+CHAIN_TIP_SPRITE = PROJECT_ROOT / "sprites" / "chain" / "ChainArrowHead.png"
 # Shoot-effect strips are 48×48 cells — load via strip cutter, not whole PNG
 SHOOT_EFFECT_FRAMES = [
     SHOOT_EFFECTS_DIR / "4_1.png",

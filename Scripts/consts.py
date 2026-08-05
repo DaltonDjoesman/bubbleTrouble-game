@@ -13,7 +13,8 @@ MAX_BULLETS = 2  # max active lasers (harpoon / drill)
 STICKY_MAX_ON_MAP = 3  # planted/growing stickies kept on the arena
 BULLET_COOLDOWN_MS = 150
 LASER_GROW_SPEED = 10
-LASER_WIDTH = 6
+# Cropped DragChain vertical link opaque width (~10px); keeps hitbox thin
+LASER_WIDTH = 10
 # Classic: ~25% slower than the old hard-coded vel_x=8
 PLAYER_VEL_X = 6
 # Time barrier (survival resource replaces multi-life stock)
@@ -48,7 +49,6 @@ CRAFTPIX = (
 CYBORG_DIR = CRAFTPIX / "1 Characters" / "3 Cyborg"
 BIKER_DIR = CRAFTPIX / "1 Characters" / "1 Biker"
 GUNS_DIR = CRAFTPIX / "2 Guns"
-BULLETS_DIR = CRAFTPIX / "5 Bullets"
 SHOOT_EFFECTS_DIR = CRAFTPIX / "4 Shoot_effects"
 
 # Explicit frame lists (also discoverable via assets.load_folder_frames)
@@ -94,7 +94,8 @@ P2_SPAWN_X_OFFSET = 120
 # Compact pistol (set 4) — P1; set 3 for P2 visual distinction
 GUN_SPRITE = GUNS_DIR / "4_1.png"
 P2_GUN_SPRITE = GUNS_DIR / "3_1.png"
-BULLET_SPRITE = BULLETS_DIR / "4_1.png"
+# Growing harpoon shaft — tileable vertical chain link (not Craftpix bullet)
+CHAIN_LINK_SPRITE = PROJECT_ROOT / "sprites" / "chain" / "DragChainLinkVertical.png"
 # Shoot-effect strips are 48×48 cells — load via strip cutter, not whole PNG
 SHOOT_EFFECT_FRAMES = [
     SHOOT_EFFECTS_DIR / "4_1.png",

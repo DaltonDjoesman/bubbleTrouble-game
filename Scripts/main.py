@@ -17,13 +17,17 @@ import pygame
 
 pygame.init()
 
+from assets import load_image
 from audio import init_audio
-from bolinha import Ball
+from ball import Ball
 from bullet import Bullet
 from consts import (
-    BOLA_SPRITE,
+    BALL_SPRITE,
     BULLET_COOLDOWN_MS,
+    CEILING_Y,
+    FLOOR_Y,
     FPS,
+    HUD_PANEL_HEIGHT,
     MAX_BULLETS,
     P1_KEYS,
     P1_SPAWN_X_OFFSET,
@@ -32,8 +36,18 @@ from consts import (
     P2_RUN_FRAMES,
     P2_SPAWN_X_OFFSET,
     P2_GUN_SPRITE,
+    PANEL_BRICK_A,
+    PANEL_BRICK_B,
+    PANEL_FRAME,
+    PANEL_FRAME_INNER,
+    PLAY_BOTTOM,
+    PLAY_LEFT,
+    PLAY_RIGHT,
+    PLAY_TOP,
     PLAYER_IDLE_FRAMES,
     PLAYER_RUN_FRAMES,
+    SPIKE_BAND_HEIGHT,
+    SPIKE_WIDTH,
     STICKY_MAX_ON_MAP,
     TIME_BAR_BG,
     TIME_BAR_EDGE,
@@ -44,8 +58,8 @@ from consts import (
     TIME_BAR_WIDTH,
     TIME_DRAIN_PER_SEC,
     TIME_POWER_SECONDS,
-    screenHeight,
-    screenWidth,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
 )
 from levels import (
     DEFAULT_LEVEL,
@@ -58,7 +72,7 @@ from levels import (
     get_level,
 )
 from menu import MainMenu
-from player import FLOOR_Y, Player
+from player import Player
 from powerup import Powerup, maybe_spawn_powerup
 from shoot_effect import ShootEffect
 
@@ -75,7 +89,7 @@ LEVEL_CLEAR_AUTO_MS = 1800
 
 class Game:
     def __init__(self) -> None:
-        self.screen = pygame.display.set_mode((screenWidth, screenHeight))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
         pygame.display.set_caption("Bubble Trouble")
         self.font = pygame.font.Font(None, 36)
@@ -96,7 +110,7 @@ class Game:
             max_level=MAX_LEVEL,
         )
 
-        self.bolas = pygame.sprite.Group()
+        self.balls = pygame.sprite.Group()
         self.players = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
@@ -113,7 +127,7 @@ class Game:
         self._doors: list[DoorRuntime] = []
         self._solids: list[pygame.Rect] = []
 
-        self._ball_base_image = pygame.image.load(BOLA_SPRITE).convert_alpha()
+        self._ball_base_image = load_image(BALL_SPRITE)
         self.audio.play_music()
 
     def _sync_selection_from_menu(self) -> None:
@@ -173,7 +187,7 @@ class Game:
         if level_id is not None:
             self.selected_level = max(DEFAULT_LEVEL, min(level_id, MAX_LEVEL))
 
-        self.bolas.empty()
+        self.balls.empty()
         self.bullets.empty()
         self.effects.empty()
         self.powerups.empty()
@@ -195,7 +209,7 @@ class Game:
         if self.selected_mode == "2P":
             self._show_notice("P1 A/D Space · P2 arrows Enter", 2800)
         for spawn in self.current_level.balls:
-            self.bolas.add(
+            self.balls.add(
                 Ball(
                     self._ball_base_image,
                     spawn.tier,
@@ -255,15 +269,76 @@ class Game:
         for old in stickies[: max(0, overflow)]:
             old.kill()
 
-    def _resolve_ball_hit(self, ball: Ball) -> None:
+    def _resolve_ball_hit(self, ball: Ball, *, from_ceiling: bool = False) -> None:
         cx, cy = ball.rect.center
-        children = ball.split(self._ball_base_image)
+        spawn_y = max(cy, CEILING_Y + 24) if from_ceiling else None
+        children = ball.split(self._ball_base_image, spawn_y=spawn_y)
+        if from_ceiling:
+            for child in children:
+                if child.rect.top < CEILING_Y:
+                    child.rect.top = CEILING_Y + 1
+                if child.vel_y < 0:
+                    child.vel_y = abs(child.vel_y) * 0.5
         ball.kill()
-        self.bolas.add(*children)
+        self.balls.add(*children)
         self.audio.play_sfx("ball_pop")
         drop = maybe_spawn_powerup(cx, cy)
         if drop is not None:
             self.powerups.add(drop)
+
+    def _spike_band_rect(self) -> pygame.Rect:
+        return pygame.Rect(
+            PLAY_LEFT,
+            PLAY_TOP,
+            PLAY_RIGHT - PLAY_LEFT,
+            SPIKE_BAND_HEIGHT,
+        )
+
+    def _handle_ceiling_spike_hits(self) -> None:
+        band = self._spike_band_rect()
+        for ball in list(self.balls):
+            if ball.rect.colliderect(band):
+                self._resolve_ball_hit(ball, from_ceiling=True)
+
+    def _draw_ceiling_spikes(self) -> None:
+        y0 = PLAY_TOP
+        y1 = PLAY_TOP + SPIKE_BAND_HEIGHT
+        fill = (168, 168, 180)
+        edge = (70, 70, 88)
+        x = PLAY_LEFT
+        while x < PLAY_RIGHT:
+            tip_x = x + SPIKE_WIDTH // 2
+            points = [(x, y0), (x + SPIKE_WIDTH, y0), (tip_x, y1)]
+            pygame.draw.polygon(self.screen, fill, points)
+            pygame.draw.polygon(self.screen, edge, points, 1)
+            x += SPIKE_WIDTH
+        # Solid roof line so the row reads as a ceiling
+        pygame.draw.line(
+            self.screen, edge, (PLAY_LEFT, PLAY_TOP), (PLAY_RIGHT, PLAY_TOP), 2
+        )
+
+    def _draw_status_panel(self) -> None:
+        panel = pygame.Rect(0, PLAY_BOTTOM, SCREEN_WIDTH, HUD_PANEL_HEIGHT)
+        brick_h, brick_w = 14, 28
+        for row, y in enumerate(range(panel.top, panel.bottom, brick_h)):
+            offset = (brick_w // 2) if row % 2 else 0
+            for x in range(panel.left - offset, panel.right + brick_w, brick_w):
+                color = PANEL_BRICK_A if ((x // brick_w) + row) % 2 == 0 else PANEL_BRICK_B
+                pygame.draw.rect(
+                    self.screen,
+                    color,
+                    pygame.Rect(x, y, brick_w - 1, brick_h - 1),
+                )
+        pygame.draw.rect(self.screen, PANEL_FRAME, panel, width=3)
+        pygame.draw.line(
+            self.screen,
+            PANEL_FRAME,
+            (0, PLAY_BOTTOM),
+            (SCREEN_WIDTH, PLAY_BOTTOM),
+            2,
+        )
+        inner = panel.inflate(-10, -10)
+        pygame.draw.rect(self.screen, PANEL_FRAME_INNER, inner, width=1)
 
     def _apply_powerup(self, power: Powerup, player: Player) -> None:
         if power.kind == "TIME":
@@ -288,7 +363,7 @@ class Game:
         # Default/STICKY/DRILL diverge on whether the laser despawns on first hit
         for laser in list(self.bullets):
             mode = getattr(laser, "mode", "harpoon")
-            hit_balls = [b for b in self.bolas if laser.rect.colliderect(b.rect)]
+            hit_balls = [b for b in self.balls if laser.rect.colliderect(b.rect)]
             if not hit_balls:
                 continue
             if mode == "drill":
@@ -312,7 +387,7 @@ class Game:
 
     def _handle_player_ball_hits(self) -> None:
         for player in list(self._living_players()):
-            if any(player.hitbox.colliderect(ball.rect) for ball in self.bolas):
+            if any(player.hitbox.colliderect(ball.rect) for ball in self.balls):
                 self._remove_player_from_level(player)
 
     def _drain_time(self) -> None:
@@ -324,7 +399,7 @@ class Game:
             self.state = "game_over"
 
     def _check_win(self) -> None:
-        if self.state != "playing" or len(self.bolas) != 0:
+        if self.state != "playing" or len(self.balls) != 0:
             return
         if self.selected_level < MAX_LEVEL:
             self.state = "level_clear"
@@ -357,14 +432,21 @@ class Game:
 
     def _draw_hud(self) -> None:
         if self.state in ("playing", "level_clear", "won", "game_over"):
+            self._draw_status_panel()
             self._draw_time_barrier()
+            # Level plate on the right side of the bottom panel
             label = self.font.render(
-                f"Lv {self.current_level.id}: {self.current_level.name}",
+                f"LEVEL {self.current_level.id}",
                 True,
-                _HUD_DIM,
+                PANEL_FRAME,
             )
-            self.screen.blit(label, (screenWidth - label.get_width() - 12, 12))
+            name = self.font.render(self.current_level.name, True, _HUD_DIM)
+            lx = SCREEN_WIDTH - max(label.get_width(), name.get_width()) - 20
+            self.screen.blit(label, (lx, PLAY_BOTTOM + 14))
+            self.screen.blit(name, (lx, PLAY_BOTTOM + 40))
+
             living = self._living_players()
+            # Weapon mode under the time bar (inside the panel)
             weapon_y = TIME_BAR_POS[1] + TIME_BAR_HEIGHT + 6
             for p in sorted(living, key=lambda pl: pl.player_id):
                 mode = getattr(p, "weapon_mode", "harpoon").upper()
@@ -373,7 +455,9 @@ class Game:
                 prefix = f"P{p.player_id} " if self.selected_mode == "2P" else ""
                 wlabel = self.font.render(f"{prefix}{mode}", True, _NEON_CYAN)
                 self.screen.blit(wlabel, (TIME_BAR_POS[0], weapon_y))
-                weapon_y += 22
+                weapon_y += 20
+
+            # Co-op down hint sits just above the panel in play space
             if self.selected_mode == "2P" and self.state == "playing":
                 down_ids = [
                     pid
@@ -386,16 +470,14 @@ class Game:
                         True,
                         _NEON_MAGENTA,
                     )
-                    self.screen.blit(
-                        hint,
-                        (TIME_BAR_POS[0], screenHeight - 36),
-                    )
+                    self.screen.blit(hint, (12, PLAY_BOTTOM - 28))
 
         if self.state in ("won", "game_over", "level_clear"):
-            dim = pygame.Surface((screenWidth, screenHeight), flags=pygame.SRCALPHA)
+            dim = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), flags=pygame.SRCALPHA)
             dim.fill(_OVERLAY)
             self.screen.blit(dim, (0, 0))
 
+        play_mid_y = PLAY_TOP + (PLAY_BOTTOM - PLAY_TOP) // 2
         if self.state == "level_clear":
             msg = self.big_font.render("LEVEL CLEAR", True, _NEON_CYAN)
             hint = self.font.render(
@@ -404,25 +486,25 @@ class Game:
                 _HUD_DIM,
             )
             self.screen.blit(
-                msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20))
+                msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20))
             )
             self.screen.blit(
-                hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30))
+                hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30))
             )
         elif self.state == "won":
             msg = self.big_font.render("YOU WIN", True, _NEON_CYAN)
             hint = self.font.render("R retry · M menu", True, _HUD_DIM)
-            self.screen.blit(msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20)))
-            self.screen.blit(hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30)))
+            self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20)))
+            self.screen.blit(hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30)))
         elif self.state == "game_over":
             msg = self.big_font.render("GAME OVER", True, _NEON_MAGENTA)
             hint = self.font.render("R retry · M menu", True, _HUD_DIM)
-            self.screen.blit(msg, msg.get_rect(center=(screenWidth // 2, screenHeight // 2 - 20)))
-            self.screen.blit(hint, hint.get_rect(center=(screenWidth // 2, screenHeight // 2 + 30)))
+            self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20)))
+            self.screen.blit(hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30)))
 
     def _go_menu(self) -> None:
         self.state = "menu"
-        self.bolas.empty()
+        self.balls.empty()
         self.bullets.empty()
         self.effects.empty()
         self.powerups.empty()
@@ -441,10 +523,10 @@ class Game:
             return
         hint = self.font.render(self._notice, True, _NEON_CYAN)
         self.screen.blit(
-            hint, hint.get_rect(center=(screenWidth // 2, screenHeight - 48))
+            hint, hint.get_rect(center=(SCREEN_WIDTH // 2, PLAY_BOTTOM - 36))
         )
 
-    def runGame(self) -> None:
+    def run(self) -> None:
         run = True
         while run:
             self.clock.tick(FPS)
@@ -514,13 +596,14 @@ class Game:
                 if self.state == "playing":
                     self._drain_time()
                     for door in self._doors:
-                        door.update(now, self.bolas)
+                        door.update(now, self.balls)
                     self._solids = collect_solids(self.current_level, self._doors)
-                    self.bolas.update(self._solids)
+                    self.balls.update(self._solids)
                     self.bullets.update(self._solids)
                     self.effects.update()
                     self.powerups.update()
                     self.players.update(self._solids)
+                    self._handle_ceiling_spike_hits()
                     self._handle_bullet_ball_hits()
                     self._handle_powerup_pickups()
                     self._handle_player_ball_hits()
@@ -528,11 +611,12 @@ class Game:
 
                 self._play_end_sfx_once()
 
-                self.bolas.draw(self.screen)
+                self.balls.draw(self.screen)
                 self.bullets.draw(self.screen)
                 self.effects.draw(self.screen)
                 self.powerups.draw(self.screen)
                 self.players.draw(self.screen)
+                self._draw_ceiling_spikes()
 
                 self._draw_hud()
                 self._draw_notice(now)
@@ -544,4 +628,4 @@ class Game:
 
 
 if __name__ == "__main__":
-    Game().runGame()
+    Game().run()

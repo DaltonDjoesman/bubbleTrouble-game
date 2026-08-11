@@ -27,6 +27,8 @@ def load_image(
     crop: bool = False,
 ) -> pygame.Surface:
     """Load a PNG with convert_alpha; optional colorkey, crop, and uniform scale."""
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing asset: {path}")
     key = (str(path.resolve()), scale, colorkey, crop)
     if key in _cache:
         return _cache[key].copy()
@@ -93,46 +95,10 @@ def load_strip_frames(
     """Load strip PNGs and return ordered scaled cell frames."""
     frames: list[pygame.Surface] = []
     for path in paths:
+        if not path.is_file():
+            raise FileNotFoundError(f"Missing asset: {path}")
         surface = pygame.image.load(str(path)).convert_alpha()
         frames.extend(cut_strip(surface, cell=cell, scale=scale))
     if not frames:
         raise ValueError(f"No frames loaded from {paths}")
     return frames
-
-
-def load_folder_frames(
-    folder: Path,
-    prefix: str,
-    *,
-    cell: int = DEFAULT_CELL,
-    scale: int = SPRITE_SCALE,
-) -> list[pygame.Surface]:
-    """Load ordered frame lists from a folder (Idle/Run/Jump/…), not only grids.
-
-    Matches ``{prefix}*.png`` in natural numeric order (Idle1, Idle2, …),
-    cutting each file as a horizontal strip when wider than ``cell``.
-    """
-    paths = sorted(
-        folder.glob(f"{prefix}*.png"),
-        key=lambda p: _natural_key(p.stem),
-    )
-    if not paths:
-        raise ValueError(f"No frames matching {prefix!r} in {folder}")
-    return load_strip_frames(paths, cell=cell, scale=scale)
-
-
-def _natural_key(stem: str) -> tuple:
-    """Sort Idle1, Idle2, … / 4_1, 4_2 before lexical surprises."""
-    parts: list = []
-    num = ""
-    for ch in stem:
-        if ch.isdigit():
-            num += ch
-        else:
-            if num:
-                parts.append(int(num))
-                num = ""
-            parts.append(ch)
-    if num:
-        parts.append(int(num))
-    return tuple(parts)

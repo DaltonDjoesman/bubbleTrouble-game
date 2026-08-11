@@ -2,25 +2,30 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 import pygame
 
+from assets import load_image
 from consts import (
+    FLOOR_Y,
     GRAVITY,
     POWERUP_DROP_CHANCE,
     POWERUP_FALL_MAX,
     POWERUP_SIZE,
-    screenHeight,
-    screenWidth,
+    POWERUP_SPRITES,
+    SCREEN_WIDTH,
 )
 
 POWER_TYPES = ("TIME", "STICKY", "DRILL")
 
-_COLORS = {
-    "TIME": ((40, 200, 255), (180, 240, 255)),
-    "STICKY": ((40, 220, 100), (160, 255, 180)),
-    "DRILL": ((255, 180, 40), (255, 230, 140)),
-}
+
+def _load_icon(path: Path) -> pygame.Surface:
+    """Load icon onto a fixed POWERUP_SIZE canvas (no downscale)."""
+    icon = load_image(path)
+    canvas = pygame.Surface((POWERUP_SIZE, POWERUP_SIZE), flags=pygame.SRCALPHA)
+    canvas.blit(icon, icon.get_rect(center=(POWERUP_SIZE // 2, POWERUP_SIZE // 2)))
+    return canvas
 
 
 class Powerup(pygame.sprite.Sprite):
@@ -29,31 +34,20 @@ class Powerup(pygame.sprite.Sprite):
         if kind not in POWER_TYPES:
             raise ValueError(f"Unknown powerup: {kind}")
         self.kind = kind
-        fill, edge = _COLORS[kind]
-        size = POWERUP_SIZE
-        image = pygame.Surface((size, size), flags=pygame.SRCALPHA)
-        pygame.draw.rect(image, fill, image.get_rect(), border_radius=4)
-        pygame.draw.rect(image, edge, image.get_rect(), width=2, border_radius=4)
-        # Simple letter mark
-        mark = kind[0]
-        font = pygame.font.Font(None, 22)
-        label = font.render(mark, True, edge)
-        image.blit(label, label.get_rect(center=(size // 2, size // 2)))
-        self.image = image
+        self.image = _load_icon(POWERUP_SPRITES[kind])
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.vel_y = 0.0
 
     def update(self, *_args, **_kwargs) -> None:
         self.vel_y = min(POWERUP_FALL_MAX, self.vel_y + GRAVITY * 0.6)
         self.rect.y += int(self.vel_y)
-        floor = screenHeight - 8 - self.rect.height
-        if self.rect.top > floor:
-            self.rect.top = floor
+        if self.rect.bottom > FLOOR_Y:
+            self.rect.bottom = FLOOR_Y
             self.vel_y = 0.0
         if self.rect.left < 0:
             self.rect.left = 0
-        if self.rect.right > screenWidth:
-            self.rect.right = screenWidth
+        if self.rect.right > SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
 
 
 def maybe_spawn_powerup(x: float, y: float) -> Powerup | None:

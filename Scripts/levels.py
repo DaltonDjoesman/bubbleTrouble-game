@@ -5,11 +5,19 @@ from dataclasses import dataclass
 
 import pygame
 
-from consts import BARRIER_CRAWL_GAP, screenHeight, screenWidth
+from consts import (
+    BARRIER_CRAWL_GAP,
+    CEILING_Y,
+    FLOOR_Y,
+    PLAY_BOTTOM,
+    PLAY_HEIGHT,
+    PLAY_TOP,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+)
 
 DEFAULT_LEVEL = 1
 MAX_LEVEL = 5
-FLOOR_Y = screenHeight - 4
 
 
 @dataclass(frozen=True)
@@ -54,7 +62,7 @@ class DoorDef:
 
     def lane_bounds(self) -> tuple[int, int]:
         left = self.lane_left if self.lane_left is not None else max(0, self.x - 120)
-        right = self.lane_right if self.lane_right is not None else min(screenWidth, self.x + self.w + 120)
+        right = self.lane_right if self.lane_right is not None else min(SCREEN_WIDTH, self.x + self.w + 120)
         return left, right
 
 
@@ -116,7 +124,7 @@ class Level:
     doors: tuple[DoorDef, ...]
     theme: LevelTheme
     time_seconds: int = 60
-    player_x: int = screenWidth // 2
+    player_x: int = SCREEN_WIDTH // 2
 
     def barrier_rects(self) -> list[pygame.Rect]:
         return [b.as_rect() for b in self.barriers]
@@ -125,8 +133,10 @@ class Level:
         return [DoorRuntime(d) for d in self.doors]
 
 
-def vertical_barrier(x: int, top: int = 40, width: int = 28) -> Solid:
-    """Barrier from `top` down to crawl-gap above the floor."""
+def vertical_barrier(x: int, top: int | None = None, width: int = 28) -> Solid:
+    """Barrier from below the spike band down to crawl-gap above the floor."""
+    if top is None:
+        top = CEILING_Y + 8
     bottom = FLOOR_Y - BARRIER_CRAWL_GAP
     return Solid(x, top, width, max(20, bottom - top))
 
@@ -151,7 +161,7 @@ def _level(
         barriers=tuple(barriers or ()),
         doors=tuple(doors or ()),
         time_seconds=max(1, int(time_seconds)),
-        player_x=screenWidth // 2 if player_x is None else player_x,
+        player_x=SCREEN_WIDTH // 2 if player_x is None else player_x,
     )
 
 
@@ -220,20 +230,20 @@ _LEVELS: dict[int, Level] = {
     1: _level(
         1,
         "Open Floor",
-        "Sem barreiras · aprende a mirar e o tempo",
+        "No barriers · learn aiming and the timer",
         _THEME_OPEN,
         balls=[
             BallSpawn("M", 220, 160, (2.0, 0.0)),
             BallSpawn("M", 580, 120, (-2.0, 0.0)),
         ],
         time_seconds=40,
-        player_x=screenWidth // 2,
+        player_x=SCREEN_WIDTH // 2,
     ),
     # L2 — Static vertical barriers create lanes; crawl underneath
     2: _level(
         2,
         "Barrier Lanes",
-        "Barreiras estáticas · rasteja por baixo",
+        "Static barriers · crawl underneath",
         _THEME_LANES,
         balls=[
             BallSpawn("L", 140, 90, (2.2, 0.0)),
@@ -245,13 +255,13 @@ _LEVELS: dict[int, Level] = {
             vertical_barrier(514, top=36, width=26),
         ],
         time_seconds=55,
-        player_x=screenWidth // 2,
+        player_x=SCREEN_WIDTH // 2,
     ),
     # L3 — Timed central door cycles open/closed
     3: _level(
         3,
         "Timed Gates",
-        "Porta a tempo · atravessa no open",
+        "Timed door · cross while open",
         _THEME_TIMED,
         balls=[
             BallSpawn("L", 100, 80, (2.5, 0.0)),
@@ -281,7 +291,7 @@ _LEVELS: dict[int, Level] = {
     4: _level(
         4,
         "Lane Clear",
-        "Limpa a pista central · a porta abre",
+        "Clear the center lane · door opens",
         _THEME_CLEAR,
         balls=[
             BallSpawn("L", 360, 70, (2.4, 0.0)),
@@ -311,7 +321,7 @@ _LEVELS: dict[int, Level] = {
     5: _level(
         5,
         "Mixed Chaos",
-        "Portas mistas · bolas densas · mais tempo",
+        "Mixed doors · dense balls · more time",
         _THEME_MIX,
         balls=[
             BallSpawn("L", 90, 55, (2.8, 0.0)),
@@ -347,7 +357,7 @@ _LEVELS: dict[int, Level] = {
             ),
         ],
         time_seconds=100,
-        player_x=screenWidth // 2,
+        player_x=SCREEN_WIDTH // 2,
     ),
 }
 
@@ -377,21 +387,23 @@ def collect_solids(
 
 
 def build_arena_background(theme: LevelTheme) -> pygame.Surface:
-    """Vertical gradient + scanlines + themed floor accent."""
-    surf = pygame.Surface((screenWidth, screenHeight))
-    for y in range(screenHeight):
-        t = y / max(1, screenHeight - 1)
+    """Play-rect gradient + scanlines + floor accent; panel strip left dark."""
+    surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+    # Reserved bottom panel stays chrome (drawn each frame); keep a dark base
+    surf.fill((28, 16, 12))
+    for y in range(PLAY_TOP, PLAY_BOTTOM):
+        t = (y - PLAY_TOP) / max(1, PLAY_HEIGHT - 1)
         r = int(theme.bg_top[0] + (theme.bg_bottom[0] - theme.bg_top[0]) * t)
         g = int(theme.bg_top[1] + (theme.bg_bottom[1] - theme.bg_top[1]) * t)
         b = int(theme.bg_top[2] + (theme.bg_bottom[2] - theme.bg_top[2]) * t)
-        pygame.draw.line(surf, (r, g, b), (0, y), (screenWidth, y))
-    for y in range(2, screenHeight, 4):
-        pygame.draw.line(surf, (0, 0, 0), (0, y), (screenWidth, y))
+        pygame.draw.line(surf, (r, g, b), (0, y), (SCREEN_WIDTH, y))
+    for y in range(PLAY_TOP + 2, PLAY_BOTTOM, 4):
+        pygame.draw.line(surf, (0, 0, 0), (0, y), (SCREEN_WIDTH, y))
     pygame.draw.line(
-        surf, theme.floor_a, (0, screenHeight - 3), (screenWidth, screenHeight - 3), 2
+        surf, theme.floor_a, (0, PLAY_BOTTOM - 3), (SCREEN_WIDTH, PLAY_BOTTOM - 3), 2
     )
     pygame.draw.line(
-        surf, theme.floor_b, (0, screenHeight - 6), (screenWidth, screenHeight - 6), 1
+        surf, theme.floor_b, (0, PLAY_BOTTOM - 6), (SCREEN_WIDTH, PLAY_BOTTOM - 6), 1
     )
     return surf
 

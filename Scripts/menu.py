@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 
 import pygame
 
-from consts import VOLUME_MAX, screenHeight, screenWidth
+from consts import VOLUME_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
 from levels import DEFAULT_LEVEL, MAX_LEVEL, get_level, list_levels
 
 if TYPE_CHECKING:
@@ -195,20 +195,20 @@ class MainMenu:
 
         title = self.big_font.render("Bubble Trouble", True, _TITLE)
         screen.blit(
-            title, title.get_rect(center=(screenWidth // 2, screenHeight // 2 - 170))
+            title, title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 170))
         )
 
         if self.screen == "options":
             subtitle = self.font.render("Options", True, _NEON_CYAN)
             screen.blit(
                 subtitle,
-                subtitle.get_rect(center=(screenWidth // 2, screenHeight // 2 - 128)),
+                subtitle.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 128)),
             )
 
         items = self._items()
         total_h = len(items) * _CARD_H + (len(items) - 1) * _CARD_GAP
-        start_y = screenHeight // 2 - total_h // 2 + (20 if self.screen == "options" else 12)
-        cx = screenWidth // 2
+        start_y = SCREEN_HEIGHT // 2 - total_h // 2 + (20 if self.screen == "options" else 12)
+        cx = SCREEN_WIDTH // 2
 
         for i, (kind, label) in enumerate(items):
             selected = i == self.selected
@@ -257,14 +257,14 @@ class MainMenu:
     def _draw_levels_screen(self, screen: pygame.Surface) -> None:
         """Dedicated level picker: header, spaced list, blurb for selection."""
         header = self.big_font.render("Select Level", True, _TITLE)
-        screen.blit(header, header.get_rect(center=(screenWidth // 2, 72)))
+        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 72)))
 
         items = self._items()
         level_items = [it for it in items if it[0].startswith("level:")]
         back_item = next(it for it in items if it[0] == "back")
 
         list_top = 130
-        cx = screenWidth // 2
+        cx = SCREEN_WIDTH // 2
         # Leave room under header; keep Back + blurb above footer
         for i, (kind, _label) in enumerate(level_items):
             selected = i == self.selected
@@ -306,7 +306,7 @@ class MainMenu:
             blurb = self.font.render(lvl.blurb, True, _NEON_CYAN)
             screen.blit(
                 blurb,
-                blurb.get_rect(center=(screenWidth // 2, back_rect.bottom + 36)),
+                blurb.get_rect(center=(SCREEN_WIDTH // 2, back_rect.bottom + 36)),
             )
 
     @staticmethod
@@ -328,24 +328,24 @@ class MainMenu:
         if self.screen == "root":
             self._draw_play_controls(screen)
 
-        y = screenHeight - 40
+        y = SCREEN_HEIGHT - 40
         parts: list[tuple[str, str | None]] = [
             ("nav", None),
-            ("text", "mover"),
+            ("text", "move"),
             ("sep", None),
         ]
         if self.screen in ("root", "options"):
             parts.extend(
                 [
                     ("vol", None),
-                    ("text", "ajustar"),
+                    ("text", "adjust"),
                     ("sep", None),
                 ]
             )
         parts.extend(
             [
                 ("text", "Enter"),
-                ("text_dim", "confirmar"),
+                ("text_dim", "confirm"),
             ]
         )
         if self.screen in ("options", "levels"):
@@ -353,7 +353,7 @@ class MainMenu:
                 [
                     ("sep", None),
                     ("text", "Esc"),
-                    ("text_dim", "voltar"),
+                    ("text_dim", "back"),
                 ]
             )
 
@@ -367,7 +367,7 @@ class MainMenu:
             else:
                 widths.append(self.font.size(payload or "")[0])
         total_w = sum(widths) + gap * (len(parts) - 1)
-        x = (screenWidth - total_w) // 2
+        x = (SCREEN_WIDTH - total_w) // 2
 
         for (kind, payload), w in zip(parts, widths):
             if kind == "nav":
@@ -389,7 +389,7 @@ class MainMenu:
 
     def _draw_play_controls(self, screen: pygame.Surface) -> None:
         """Gameplay key legend above the nav footer (drawn arrows, not Unicode)."""
-        y = screenHeight - 68
+        y = SCREEN_HEIGHT - 68
         if self.mode == "2P":
             # Measure: "P1  A/D + Space   ·   P2  <> + Enter"
             p1 = self.font.render("P1  A/D + Space", True, _HINT_DIM)
@@ -409,7 +409,7 @@ class MainMenu:
                 + 8
                 + p2_post.get_width()
             )
-            x = (screenWidth - total) // 2
+            x = (SCREEN_WIDTH - total) // 2
             screen.blit(p1, p1.get_rect(midleft=(x, y)))
             x += p1.get_width() + gap
             screen.blit(sep, sep.get_rect(center=(x + sep.get_width() // 2, y)))
@@ -421,8 +421,8 @@ class MainMenu:
             x += arrow_cluster + 8
             screen.blit(p2_post, p2_post.get_rect(midleft=(x, y)))
         else:
-            line = self.font.render("A/D mover  ·  Space disparar", True, _HINT_DIM)
-            screen.blit(line, line.get_rect(center=(screenWidth // 2, y)))
+            line = self.font.render("A/D move  ·  Space fire", True, _HINT_DIM)
+            screen.blit(line, line.get_rect(center=(SCREEN_WIDTH // 2, y)))
 
     @staticmethod
     def _draw_arrow_up(surf: pygame.Surface, cx: int, cy: int, size: int, color: tuple) -> None:

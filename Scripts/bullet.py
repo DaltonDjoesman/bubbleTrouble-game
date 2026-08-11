@@ -4,6 +4,7 @@ import pygame
 
 from assets import load_image
 from consts import (
+    CEILING_Y,
     CHAIN_LINK_SPRITE,
     CHAIN_TIP_SPRITE,
     LASER_GROW_SPEED,
@@ -149,9 +150,9 @@ class Bullet(pygame.sprite.Sprite):
             return
 
         self.top -= LASER_GROW_SPEED
-        hit_ceiling = self.top <= 0
+        hit_ceiling = self.top <= CEILING_Y
         if hit_ceiling:
-            self.top = 0
+            self.top = CEILING_Y
             self._rebuild()
             if self.mode == "sticky":
                 self.planted = True

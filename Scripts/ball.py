@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import pygame
 
-from consts import BALL_SIZES, BALL_TINTS, GRAVITY, screenHeight, screenWidth
+from consts import (
+    BALL_SIZES,
+    BALL_TINTS,
+    FLOOR_Y,
+    GRAVITY,
+    PLAY_LEFT,
+    PLAY_RIGHT,
+)
 
 
 def _tint_surface(base: pygame.Surface, tint: tuple[int, int, int]) -> pygame.Surface:
@@ -40,7 +47,10 @@ class Ball(pygame.sprite.Sprite):
     def update(self, solids: list[pygame.Rect] | None = None) -> None:
         solids = solids or []
 
-        if self.rect.left + self.vel_x <= 0 or self.rect.right + self.vel_x >= screenWidth:
+        if (
+            self.rect.left + self.vel_x <= PLAY_LEFT
+            or self.rect.right + self.vel_x >= PLAY_RIGHT
+        ):
             self.vel_x *= -1
 
         self.rect.x += int(self.vel_x)
@@ -57,8 +67,8 @@ class Ball(pygame.sprite.Sprite):
         self.vel_y += GRAVITY
         self.rect.y += int(self.vel_y)
 
-        if self.rect.bottom > screenHeight:
-            self.rect.bottom = screenHeight
+        if self.rect.bottom > FLOOR_Y:
+            self.rect.bottom = FLOOR_Y
             self.vel_y = self.bounce_impulse
 
         for solid in solids:
@@ -74,12 +84,18 @@ class Ball(pygame.sprite.Sprite):
                 self.vel_y = abs(self.vel_y) * 0.35
             break
 
-    def split(self, base_image: pygame.Surface) -> list[Ball]:
+    def split(
+        self,
+        base_image: pygame.Surface,
+        *,
+        spawn_y: float | None = None,
+    ) -> list[Ball]:
         """Resolve a hit: spawn two smaller balls, or nothing if already smallest."""
         next_size = BALL_SIZES[self.size]["next"]
         if next_size is None:
             return []
-        cx, cy = self.rect.center
+        cx = self.rect.centerx
+        cy = float(self.rect.centery if spawn_y is None else spawn_y)
         speed = abs(self.vel_x) if self.vel_x != 0 else 2.0
         return [
             Ball(base_image, next_size, cx - 8, cy, (-speed, self.bounce_impulse * 0.6)),

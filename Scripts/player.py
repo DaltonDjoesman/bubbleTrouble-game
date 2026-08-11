@@ -7,6 +7,7 @@ import pygame
 
 from assets import load_image, load_strip_frames
 from consts import (
+    FLOOR_Y,
     GUN_HAND_Y_FRAC,
     GUN_SCALE,
     GUN_SPRITE,
@@ -16,11 +17,8 @@ from consts import (
     PLAYER_RUN_FRAMES,
     PLAYER_SCALE,
     PLAYER_VEL_X,
-    screenHeight,
-    screenWidth,
+    SCREEN_WIDTH,
 )
-
-FLOOR_Y = screenHeight - 4
 
 # pygame.key.get_pressed() indices for named keys
 _KEY_NAME_TO_CODE: dict[str, int] = {
@@ -160,8 +158,8 @@ class Player(pygame.sprite.Sprite):
     def _clamp_body_to_screen(self, box: pygame.Rect) -> pygame.Rect:
         if box.left < 0:
             box.x = 0
-        if box.right > screenWidth:
-            box.x = screenWidth - box.width
+        if box.right > SCREEN_WIDTH:
+            box.x = SCREEN_WIDTH - box.width
         return box
 
     def _resolve_horizontal(self, solids: list[pygame.Rect]) -> None:
@@ -198,8 +196,8 @@ class Player(pygame.sprite.Sprite):
         box = self._body_box()
         if box.left + dx < 0:
             dx = -box.left
-        elif box.right + dx > screenWidth:
-            dx = screenWidth - box.right
+        elif box.right + dx > SCREEN_WIDTH:
+            dx = SCREEN_WIDTH - box.right
 
         self.rect.x += dx
         self._resolve_horizontal(solids)

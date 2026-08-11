@@ -3,11 +3,27 @@ from pathlib import Path
 from assets import SPRITE_SCALE
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ASSETS = PROJECT_ROOT / "assets"
 
-screenWidth = 800
-screenHeight = 600
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
 FPS = 60
 GRAVITY = 0.3
+
+# Play area sits above a reserved Pang-style bottom status panel
+HUD_PANEL_HEIGHT = 80
+PLAY_TOP = 0
+PLAY_LEFT = 0
+PLAY_RIGHT = SCREEN_WIDTH
+PLAY_BOTTOM = SCREEN_HEIGHT - HUD_PANEL_HEIGHT
+PLAY_HEIGHT = PLAY_BOTTOM - PLAY_TOP
+FLOOR_INSET = 4
+FLOOR_Y = PLAY_BOTTOM - FLOOR_INSET
+
+# Ceiling spike row (visual + collision band below PLAY_TOP)
+SPIKE_BAND_HEIGHT = 16
+SPIKE_WIDTH = 14
+CEILING_Y = PLAY_TOP + SPIKE_BAND_HEIGHT
 
 MAX_BULLETS = 2  # max active lasers (harpoon / drill)
 STICKY_MAX_ON_MAP = 3  # planted/growing stickies kept on the arena
@@ -21,7 +37,7 @@ PLAYER_VEL_X = 6
 TIME_DRAIN_PER_SEC = 1.0
 TIME_POWER_SECONDS = 8
 POWERUP_DROP_CHANCE = 0.28
-POWERUP_SIZE = 22
+POWERUP_SIZE = 24  # native icon size (no downscale)
 POWERUP_FALL_MAX = 4.0
 # Crawl gap under barriers/doors so the player can cross (pixels above floor)
 BARRIER_CRAWL_GAP = 72
@@ -35,23 +51,17 @@ BALL_SIZES = {
 
 # Neon tint per ball size (cyberpunk palette; applied at load time)
 BALL_TINTS = {
-    "L": (255, 60, 160),   # magenta
-    "M": (60, 220, 255),   # cyan
+    "L": (255, 60, 160),  # magenta
+    "M": (60, 220, 255),  # cyan
     "S": (180, 100, 255),  # violet
 }
 
-CRAFTPIX = (
-    PROJECT_ROOT
-    / "sprites"
-    / "craftpix-net-730561-free-guns-for-cyberpunk-characters-pixel-art"
-)
+CRAFTPIX = ASSETS / "craftpix"
+CYBORG_DIR = CRAFTPIX / "characters" / "cyborg"
+BIKER_DIR = CRAFTPIX / "characters" / "biker"
+GUNS_DIR = CRAFTPIX / "guns"
+SHOOT_EFFECTS_DIR = CRAFTPIX / "shoot_effects"
 
-CYBORG_DIR = CRAFTPIX / "1 Characters" / "3 Cyborg"
-BIKER_DIR = CRAFTPIX / "1 Characters" / "1 Biker"
-GUNS_DIR = CRAFTPIX / "2 Guns"
-SHOOT_EFFECTS_DIR = CRAFTPIX / "4 Shoot_effects"
-
-# Explicit frame lists (also discoverable via assets.load_folder_frames)
 PLAYER_IDLE_FRAMES = [
     CYBORG_DIR / "Idle1.png",
     CYBORG_DIR / "Idle2.png",
@@ -59,10 +69,6 @@ PLAYER_IDLE_FRAMES = [
 PLAYER_RUN_FRAMES = [
     CYBORG_DIR / "Run1.png",
     CYBORG_DIR / "Run2.png",
-]
-PLAYER_JUMP_FRAMES = [
-    CYBORG_DIR / "Jump1.png",
-    CYBORG_DIR / "Jump2.png",
 ]
 
 # P2 (Biker) — co-op
@@ -95,26 +101,39 @@ P2_SPAWN_X_OFFSET = 120
 GUN_SPRITE = GUNS_DIR / "4_1.png"
 P2_GUN_SPRITE = GUNS_DIR / "3_1.png"
 # Growing harpoon shaft — tileable vertical chain link (not Craftpix bullet)
-CHAIN_LINK_SPRITE = PROJECT_ROOT / "sprites" / "chain" / "DragChainLinkVertical.png"
-CHAIN_TIP_SPRITE = PROJECT_ROOT / "sprites" / "chain" / "ChainArrowHead.png"
+CHAIN_LINK_SPRITE = ASSETS / "chain" / "DragChainLinkVertical.png"
+CHAIN_TIP_SPRITE = ASSETS / "chain" / "ChainArrowHead.png"
 # Shoot-effect strips are 48×48 cells — load via strip cutter, not whole PNG
 SHOOT_EFFECT_FRAMES = [
     SHOOT_EFFECTS_DIR / "4_1.png",
     SHOOT_EFFECTS_DIR / "4_2.png",
 ]
 
-BOLA_SPRITE = PROJECT_ROOT / "Assests" / "bola branca.png"
+BALL_SPRITE = ASSETS / "ball.png"
 
-# Time barrier HUD (replaces multi-life capsule display)
-TIME_BAR_WIDTH = 220
+# Powerup pickup sprites — crisp 24×24 pixel icons (native size)
+POWERUP_SPRITES = {
+    "TIME": ASSETS / "powerups" / "time.png",
+    "STICKY": ASSETS / "powerups" / "sticky.png",
+    "DRILL": ASSETS / "powerups" / "drill.png",
+}
+
+# Time barrier HUD — drawn inside the bottom status panel
+TIME_BAR_WIDTH = 520
 TIME_BAR_HEIGHT = 18
-TIME_BAR_POS = (12, 12)
+TIME_BAR_POS = (16, PLAY_BOTTOM + 22)
 TIME_BAR_FILL = (220, 40, 70)
 TIME_BAR_FILL_LOW = (255, 90, 40)
 TIME_BAR_EDGE = (255, 120, 160)
 TIME_BAR_BG = (20, 8, 18)
 
-PLAYER_FRAME_SIZE = 48
+# Bottom panel chrome (Pang-inspired brick strip)
+PANEL_BRICK_A = (118, 72, 48)
+PANEL_BRICK_B = (92, 54, 36)
+PANEL_BRICK_MORTAR = (48, 28, 18)
+PANEL_FRAME = (210, 170, 110)
+PANEL_FRAME_INNER = (40, 22, 14)
+
 PLAYER_SCALE = SPRITE_SCALE  # alias — documented scale lives in assets.SPRITE_SCALE
 # Shrink opaque bounds a bit so collisions feel fair vs transparent padding
 PLAYER_HITBOX_INSET = 0.15

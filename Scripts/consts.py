@@ -165,12 +165,10 @@ TIME_BAR_FILL_LOW = (255, 90, 40)
 TIME_BAR_EDGE = (255, 120, 160)
 TIME_BAR_BG = (20, 8, 18)
 
-# Bottom panel chrome (Pang-inspired brick strip)
-PANEL_BRICK_A = (118, 72, 48)
-PANEL_BRICK_B = (92, 54, 36)
-PANEL_BRICK_MORTAR = (48, 28, 18)
-PANEL_FRAME = (210, 170, 110)
-PANEL_FRAME_INNER = (40, 22, 14)
+# Bottom panel chrome (cyberpunk strip — aliases UI tokens)
+PANEL_FRAME = UI_NEON_CYAN
+PANEL_FRAME_INNER = UI_BORDER
+PANEL_ACCENT = UI_NEON_MAGENTA
 
 PLAYER_SCALE = SPRITE_SCALE  # alias — documented scale lives in assets.SPRITE_SCALE
 # Shrink opaque bounds a bit so collisions feel fair vs transparent padding

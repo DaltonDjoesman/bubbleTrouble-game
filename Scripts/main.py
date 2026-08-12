@@ -96,7 +96,9 @@ class Game:
         self.big_font = pygame.font.Font(None, 64)
         self.current_level: Level = get_level(DEFAULT_LEVEL)
         self.background = build_arena_background(self.current_level.theme)
-        self._menu_background = build_arena_background(get_level(DEFAULT_LEVEL).theme)
+        self._menu_background = build_arena_background(
+            get_level(DEFAULT_LEVEL).theme, fill_window=True
+        )
 
         self.audio = init_audio()
         self.selected_mode = "1P"

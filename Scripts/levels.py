@@ -386,24 +386,43 @@ def collect_solids(
     return solids
 
 
-def build_arena_background(theme: LevelTheme) -> pygame.Surface:
-    """Play-rect gradient + scanlines + floor accent; panel strip left dark."""
+def build_arena_background(
+    theme: LevelTheme,
+    *,
+    fill_window: bool = False,
+) -> pygame.Surface:
+    """Cyberpunk gradient + scanlines + floor accent.
+
+    During play (`fill_window=False`), art fills only the play rect so the
+    bottom status panel stays chrome. Menu uses `fill_window=True` for a
+    full-bleed backdrop.
+    """
     surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-    # Reserved bottom panel stays chrome (drawn each frame); keep a dark base
-    surf.fill((28, 16, 12))
-    for y in range(PLAY_TOP, PLAY_BOTTOM):
-        t = (y - PLAY_TOP) / max(1, PLAY_HEIGHT - 1)
+    if fill_window:
+        top, bottom = 0, SCREEN_HEIGHT
+        height = SCREEN_HEIGHT
+        surf.fill(theme.bg_bottom)
+    else:
+        top, bottom = PLAY_TOP, PLAY_BOTTOM
+        height = PLAY_HEIGHT
+        # Reserved bottom panel stays chrome (drawn each frame)
+        surf.fill((28, 16, 12))
+
+    for y in range(top, bottom):
+        t = (y - top) / max(1, height - 1)
         r = int(theme.bg_top[0] + (theme.bg_bottom[0] - theme.bg_top[0]) * t)
         g = int(theme.bg_top[1] + (theme.bg_bottom[1] - theme.bg_top[1]) * t)
         b = int(theme.bg_top[2] + (theme.bg_bottom[2] - theme.bg_top[2]) * t)
         pygame.draw.line(surf, (r, g, b), (0, y), (SCREEN_WIDTH, y))
-    for y in range(PLAY_TOP + 2, PLAY_BOTTOM, 4):
+    for y in range(top + 2, bottom, 4):
         pygame.draw.line(surf, (0, 0, 0), (0, y), (SCREEN_WIDTH, y))
+
+    floor_y = SCREEN_HEIGHT if fill_window else PLAY_BOTTOM
     pygame.draw.line(
-        surf, theme.floor_a, (0, PLAY_BOTTOM - 3), (SCREEN_WIDTH, PLAY_BOTTOM - 3), 2
+        surf, theme.floor_a, (0, floor_y - 3), (SCREEN_WIDTH, floor_y - 3), 2
     )
     pygame.draw.line(
-        surf, theme.floor_b, (0, PLAY_BOTTOM - 6), (SCREEN_WIDTH, PLAY_BOTTOM - 6), 1
+        surf, theme.floor_b, (0, floor_y - 6), (SCREEN_WIDTH, floor_y - 6), 1
     )
     return surf
 

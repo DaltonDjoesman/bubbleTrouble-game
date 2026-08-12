@@ -11,8 +11,8 @@
 
 ## 3. HUD & end flow
 
-- [ ] 3.1 Show numeric chronometer (and Survival label) in the bottom panel during Survival instead of draining barrier fill
-- [ ] 3.2 On Survival game over, show final time; if top-5 for the run's mode board, prompt for 3-letter initials and save
+- [x] 3.1 Show numeric chronometer (and Survival label) in the bottom panel during Survival instead of draining barrier fill
+- [x] 3.2 On Survival game over, show final time; if top-5 for the run's mode board, prompt for 3-letter initials and save
 
 ## 4. High scores persistence & menu
 

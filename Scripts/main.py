@@ -29,6 +29,7 @@ from consts import (
     FLOOR_Y,
     FPS,
     HUD_PANEL_HEIGHT,
+    HIGHSCORE_NAME_LEN,
     MAX_BULLETS,
     P1_KEYS,
     P1_SPAWN_X_OFFSET,
@@ -69,6 +70,13 @@ from consts import (
     TIME_POWER_SECONDS,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
+)
+from highscores import (
+    board_key_for_mode,
+    format_time_ms,
+    insert_score,
+    load_highscores,
+    qualifies,
 )
 from levels import (
     DEFAULT_LEVEL,
@@ -113,6 +121,7 @@ class Game:
         self.audio = init_audio()
         self.selected_mode = "1P"
         self.selected_level = DEFAULT_LEVEL
+        self.highscores = load_highscores()
         self.menu = MainMenu(
             self.font,
             self.big_font,
@@ -142,6 +151,10 @@ class Game:
         self._level_clear_at = 0
         self._doors: list[DoorRuntime] = []
         self._solids: list[pygame.Rect] = []
+        self._initials = ["A"] * HIGHSCORE_NAME_LEN
+        self._initials_index = 0
+        self._survival_rank: int | None = None
+        self._score_saved = False
 
         self._ball_base_image = load_image(BALL_SPRITE)
         self.audio.play_music()
@@ -294,6 +307,10 @@ class Game:
         self.state = "playing"
         self._end_sfx_played = False
         self._level_clear_at = 0
+        self._survival_rank = None
+        self._score_saved = False
+        self._initials = ["A"] * HIGHSCORE_NAME_LEN
+        self._initials_index = 0
 
         self.current_level = get_level(self.selected_level)
         self.background = build_arena_background(self.current_level.theme)
@@ -486,10 +503,70 @@ class Game:
         player.kill()
         self.audio.play_sfx("player_hit")
         if self.selected_mode == "1P" or not self._living_players():
-            self._finalize_survival_time()
-            self.state = "game_over"
+            self._enter_game_over()
         else:
             self._show_notice(f"P{player.player_id} down", 1800)
+
+    def _enter_game_over(self) -> None:
+        """Finalize Survival time and prompt for initials when the run qualifies."""
+        self._finalize_survival_time()
+        if self._is_survival():
+            key = board_key_for_mode(self.selected_mode)
+            if qualifies(self.highscores, key, self.survival_elapsed_ms):
+                self._initials = ["A"] * HIGHSCORE_NAME_LEN
+                self._initials_index = 0
+                self._score_saved = False
+                self._survival_rank = None
+                self.state = "initials"
+                return
+        self.state = "game_over"
+
+    def _submit_initials(self) -> None:
+        if self._score_saved:
+            self.state = "game_over"
+            return
+        name = "".join(self._initials)
+        key = board_key_for_mode(self.selected_mode)
+        rank = insert_score(
+            self.highscores, key, name, self.survival_elapsed_ms
+        )
+        self._survival_rank = rank if rank > 0 else None
+        self._score_saved = True
+        self.state = "game_over"
+        self.audio.play_sfx("ui_confirm")
+
+    def _nudge_initial_letter(self, delta: int) -> None:
+        idx = self._initials_index
+        code = ord(self._initials[idx]) - ord("A")
+        code = (code + delta) % 26
+        self._initials[idx] = chr(ord("A") + code)
+        self.audio.play_sfx("ui_select")
+
+    def _handle_initials_keydown(self, key: int) -> None:
+        if key == pygame.K_LEFT:
+            self._nudge_initial_letter(-1)
+        elif key == pygame.K_RIGHT:
+            self._nudge_initial_letter(+1)
+        elif key == pygame.K_UP:
+            self._nudge_initial_letter(+1)
+        elif key == pygame.K_DOWN:
+            self._nudge_initial_letter(-1)
+        elif key == pygame.K_BACKSPACE:
+            if self._initials_index > 0:
+                self._initials_index -= 1
+            self._initials[self._initials_index] = "A"
+            self.audio.play_sfx("ui_select")
+        elif key in (pygame.K_RETURN, pygame.K_SPACE):
+            if self._initials_index < HIGHSCORE_NAME_LEN - 1:
+                self._initials_index += 1
+                self.audio.play_sfx("ui_select")
+            else:
+                self._submit_initials()
+        elif pygame.K_a <= key <= pygame.K_z:
+            self._initials[self._initials_index] = chr(key).upper()
+            if self._initials_index < HIGHSCORE_NAME_LEN - 1:
+                self._initials_index += 1
+            self.audio.play_sfx("ui_select")
 
     def _handle_player_ball_hits(self) -> None:
         for player in list(self._living_players()):
@@ -523,7 +600,7 @@ class Game:
         if self.state in ("won", "level_clear"):
             self.audio.play_sfx("win")
             self._end_sfx_played = True
-        elif self.state == "game_over":
+        elif self.state in ("game_over", "initials"):
             self.audio.play_sfx("lose")
             self._end_sfx_played = True
 
@@ -539,23 +616,35 @@ class Game:
             pygame.draw.rect(self.screen, fill_color, fill, border_radius=3)
         pygame.draw.rect(self.screen, TIME_BAR_EDGE, outer, width=2, border_radius=4)
 
+    def _draw_survival_chronometer(self) -> None:
+        x, y = TIME_BAR_POS
+        clock = format_time_ms(self.survival_elapsed_ms)
+        label = self.font.render(f"TIME  {clock}", True, _NEON_CYAN)
+        self.screen.blit(label, (x, y + 2))
+
     def _draw_hud(self) -> None:
-        if self.state in ("playing", "level_clear", "won", "game_over"):
+        if self.state in ("playing", "level_clear", "won", "game_over", "initials"):
             self._draw_status_panel()
-            self._draw_time_barrier()
+            if self._is_survival():
+                self._draw_survival_chronometer()
+            else:
+                self._draw_time_barrier()
             # Level plate on the right side of the bottom panel
-            label = self.font.render(
-                f"LEVEL {self.current_level.id}",
-                True,
-                PANEL_FRAME,
-            )
+            if self._is_survival():
+                label = self.font.render("SURVIVAL", True, PANEL_FRAME)
+            else:
+                label = self.font.render(
+                    f"LEVEL {self.current_level.id}",
+                    True,
+                    PANEL_FRAME,
+                )
             name = self.font.render(self.current_level.name, True, _HUD_DIM)
             lx = SCREEN_WIDTH - max(label.get_width(), name.get_width()) - 20
             self.screen.blit(label, (lx, PLAY_BOTTOM + 14))
             self.screen.blit(name, (lx, PLAY_BOTTOM + 40))
 
             living = self._living_players()
-            # Weapon mode under the time bar (inside the panel)
+            # Weapon mode under the time / chronometer (inside the panel)
             weapon_y = TIME_BAR_POS[1] + TIME_BAR_HEIGHT + 6
             for p in sorted(living, key=lambda pl: pl.player_id):
                 mode = getattr(p, "weapon_mode", "harpoon").upper()
@@ -581,7 +670,7 @@ class Game:
                     )
                     self.screen.blit(hint, (12, PLAY_BOTTOM - 28))
 
-        if self.state in ("won", "game_over", "level_clear"):
+        if self.state in ("won", "game_over", "level_clear", "initials"):
             dim = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), flags=pygame.SRCALPHA)
             dim.fill(_OVERLAY)
             self.screen.blit(dim, (0, 0))
@@ -605,11 +694,73 @@ class Game:
             hint = self.font.render("R retry · M menu", True, _HUD_DIM)
             self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20)))
             self.screen.blit(hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30)))
+        elif self.state == "initials":
+            self._draw_initials_overlay(play_mid_y)
         elif self.state == "game_over":
             msg = self.big_font.render("GAME OVER", True, _NEON_MAGENTA)
-            hint = self.font.render("R retry · M menu", True, _HUD_DIM)
-            self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20)))
-            self.screen.blit(hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30)))
+            self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 40)))
+            if self._is_survival():
+                clock = format_time_ms(self.survival_elapsed_ms)
+                time_line = self.font.render(f"Time  {clock}", True, _NEON_CYAN)
+                self.screen.blit(
+                    time_line,
+                    time_line.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 4)),
+                )
+                y_hint = play_mid_y + 40
+                if self._survival_rank:
+                    rank_line = self.font.render(
+                        f"New record! Rank #{self._survival_rank}",
+                        True,
+                        (255, 220, 80),
+                    )
+                    self.screen.blit(
+                        rank_line,
+                        rank_line.get_rect(center=(SCREEN_WIDTH // 2, y_hint)),
+                    )
+                    y_hint += 32
+                hint = self.font.render("R retry · M menu", True, _HUD_DIM)
+                self.screen.blit(
+                    hint, hint.get_rect(center=(SCREEN_WIDTH // 2, y_hint))
+                )
+            else:
+                hint = self.font.render("R retry · M menu", True, _HUD_DIM)
+                self.screen.blit(
+                    hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30))
+                )
+
+    def _draw_initials_overlay(self, play_mid_y: int) -> None:
+        msg = self.big_font.render("NEW HIGH SCORE", True, (255, 220, 80))
+        clock = format_time_ms(self.survival_elapsed_ms)
+        time_line = self.font.render(f"Time  {clock}", True, _NEON_CYAN)
+        prompt = self.font.render("Enter initials", True, _HUD_DIM)
+        self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 70)))
+        self.screen.blit(
+            time_line, time_line.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20))
+        )
+        self.screen.blit(
+            prompt, prompt.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 16))
+        )
+
+        letter_gap = 48
+        start_x = SCREEN_WIDTH // 2 - letter_gap
+        for i, ch in enumerate(self._initials):
+            color = (255, 220, 80) if i == self._initials_index else _NEON_CYAN
+            letter = self.big_font.render(ch, True, color)
+            lx = start_x + i * letter_gap
+            self.screen.blit(letter, letter.get_rect(center=(lx, play_mid_y + 70)))
+            if i == self._initials_index:
+                underline = pygame.Rect(0, 0, 28, 3)
+                underline.center = (lx, play_mid_y + 92)
+                pygame.draw.rect(self.screen, color, underline)
+
+        hint = self.font.render(
+            "Left/Right letter · Enter next · type A-Z",
+            True,
+            _HUD_DIM,
+        )
+        self.screen.blit(
+            hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 130))
+        )
 
     def _go_menu(self) -> None:
         self.state = "menu"
@@ -655,6 +806,11 @@ class Game:
                                 mode=self.selected_mode,
                                 level_id=self.selected_level,
                             )
+                    elif self.state == "initials":
+                        if event.key == pygame.K_ESCAPE:
+                            self._go_menu()
+                        else:
+                            self._handle_initials_keydown(event.key)
                     elif self.state == "playing":
                         for player in self._living_players():
                             if event.key == player.fire_key:

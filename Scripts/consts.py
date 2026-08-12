@@ -10,7 +10,7 @@ SCREEN_HEIGHT = 600
 FPS = 60
 GRAVITY = 0.3
 
-# Play area sits above a reserved Pang-style bottom status panel
+# Play area sits above a reserved bottom status panel
 HUD_PANEL_HEIGHT = 80
 PLAY_TOP = 0
 PLAY_LEFT = 0
@@ -19,6 +19,26 @@ PLAY_BOTTOM = SCREEN_HEIGHT - HUD_PANEL_HEIGHT
 PLAY_HEIGHT = PLAY_BOTTOM - PLAY_TOP
 FLOOR_INSET = 4
 FLOOR_Y = PLAY_BOTTOM - FLOOR_INSET
+
+# Cyberpunk UI tokens (designPrototype hybrid — arcade-2 palette)
+UI_BG = (5, 5, 8)  # #050508
+UI_SCREEN = (9, 9, 15)  # #09090f
+UI_SURFACE = (17, 17, 24)  # #111118
+UI_SURFACE_RAISED = (22, 22, 34)
+UI_BORDER = (26, 26, 43)  # #1a1a2b
+UI_FG = (240, 240, 245)  # #f0f0f5
+UI_MUTED = (110, 110, 128)  # #6e6e80
+UI_NEON_CYAN = (0, 240, 255)  # #00f0ff
+UI_NEON_MAGENTA = (255, 0, 85)  # #ff0055
+UI_NEON_GOLD = (255, 183, 0)  # #ffb700
+UI_OVERLAY = (8, 4, 20, 180)
+
+# Bundled monospace UI font (JetBrains Mono OFL — see assets/fonts/)
+UI_FONT_REGULAR = ASSETS / "fonts" / "JetBrainsMono-Regular.ttf"
+UI_FONT_BOLD = ASSETS / "fonts" / "JetBrainsMono-Bold.ttf"
+UI_FONT_SIZE = 20
+UI_FONT_TITLE_SIZE = 36
+UI_FONT_SMALL_SIZE = 14
 
 # Ceiling spike row (visual + collision band below PLAY_TOP)
 SPIKE_BAND_HEIGHT = 16
@@ -44,18 +64,20 @@ BARRIER_CRAWL_GAP = 72
 
 # Survival spawn director (endless mode)
 SURVIVAL_MAX_BALLS = 12
-SURVIVAL_SPAWN_INTERVAL_START_MS = 2800
-SURVIVAL_SPAWN_INTERVAL_MIN_MS = 900
-SURVIVAL_SPAWN_RAMP_MS = 120_000  # reach min interval over ~2 minutes
+SURVIVAL_SPAWN_INTERVAL_START_MS = 2600
+SURVIVAL_SPAWN_INTERVAL_MIN_MS = 800
+SURVIVAL_SPAWN_RAMP_MS = 90_000  # reach min interval in ~1.5 min (was ~2 min)
 SURVIVAL_SPAWN_PAUSE_MS = 4000  # TIME powerup pauses new spawns
 SURVIVAL_SPAWN_Y = CEILING_Y + 48
-SURVIVAL_SPAWN_SPEED = 2.2
+SURVIVAL_SPAWN_SPEED = 2.3
+SURVIVAL_SPEED_RAMP_MS = 70_000
+SURVIVAL_SPEED_BONUS_MAX = 1.3
 # Size weight milestones: (elapsed_ms, (S, M, L) weights)
 SURVIVAL_SIZE_WEIGHTS = (
-    (0, (80, 20, 0)),
-    (45_000, (50, 40, 10)),
-    (90_000, (25, 45, 30)),
-    (150_000, (10, 40, 50)),
+    (0, (75, 25, 0)),
+    (30_000, (48, 38, 14)),
+    (65_000, (22, 42, 36)),
+    (105_000, (10, 38, 52)),
 )
 
 # Ball size tiers: large → medium → small

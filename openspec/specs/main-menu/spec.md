@@ -1,6 +1,6 @@
 ## Purpose
 
-Main menu entry flow: Play/Quit, mode and level selection, keyboard navigation, and audio settings before a match.
+Main menu entry flow: Play/Quit, mode and level selection (including Survival), High Scores, keyboard navigation, and audio settings before a match.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ The game SHALL show a main menu before a match starts, with Play and Quit action
 - **THEN** the application exits
 
 ### Requirement: Mode and level selection
-The menu SHALL let the player choose 1 or 2 players and select a level.
+The menu SHALL let the player choose 1 or 2 players and select a level, including the Survival level as the last selectable entry.
 
 #### Scenario: Choose mode
 - **WHEN** the player changes mode between 1P and 2P on the menu
@@ -25,6 +25,17 @@ The menu SHALL let the player choose 1 or 2 players and select a level.
 #### Scenario: Choose level
 - **WHEN** the player changes the selected level on the menu
 - **THEN** Play starts (or will start) that level id when levels exist
+
+#### Scenario: Choose Survival
+- **WHEN** the player selects Survival in level select and confirms Play
+- **THEN** the next match starts in Survival mode
+
+### Requirement: High Scores entry on menu
+The main menu SHALL expose a High Scores action that opens the High Scores view (1P/2P boards) defined by the high-scores capability.
+
+#### Scenario: Open High Scores
+- **WHEN** the player selects High Scores from the menu
+- **THEN** the High Scores view is shown
 
 ### Requirement: Keyboard navigation
 The menu SHALL be operable with keyboard (navigate + confirm).

@@ -7,8 +7,15 @@ from typing import TYPE_CHECKING, Literal
 import pygame
 
 from consts import VOLUME_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
-from highscores import format_time_ms, load_highscores
-from levels import DEFAULT_LEVEL, MAX_LEVEL, get_level, list_levels
+from highscores import board_key_for_mode, format_time_ms, load_highscores
+from levels import (
+    DEFAULT_LEVEL,
+    MAX_CAMPAIGN_LEVEL,
+    MAX_LEVEL,
+    SURVIVAL_LEVEL_ID,
+    get_level,
+    list_levels,
+)
 
 if TYPE_CHECKING:
     from audio import AudioManager
@@ -29,9 +36,22 @@ _CARD_H = 48
 _CARD_GAP = 10
 _LEVEL_CARD_H = 42
 _LEVEL_CARD_GAP = 6
+_GRID_CARD_W = 188
+_GRID_COL_GAP = 12
 
 MODES = ("1P", "2P")
 SCORE_TABS = ("1p", "2p")
+LEVEL_TABS = ("campaign", "survival")
+
+# Campaign grid navigation (indices 0–4 = levels, 5 = back)
+_CAMPAIGN_NAV: dict[int, dict[str, int]] = {
+    0: {"down": 2, "right": 1},
+    1: {"down": 3, "left": 0},
+    2: {"up": 0, "down": 4, "right": 3},
+    3: {"up": 1, "down": 5, "left": 2},
+    4: {"up": 2, "down": 5},
+    5: {"up": 4},
+}
 
 Screen = Literal["root", "options", "levels", "scores"]
 
@@ -67,7 +87,14 @@ class MainMenu:
         self.max_level = max(1, max_level)
         self.level = max(1, min(level, self.max_level))
         self.score_tab = "1p"
+        self.level_tab = "campaign"
         self._score_boards: dict[str, list[ScoreEntry]] = load_highscores()
+
+    def _campaign_levels(self) -> list:
+        return [lvl for lvl in list_levels() if not lvl.survival]
+
+    def _survival_level(self):
+        return get_level(SURVIVAL_LEVEL_ID)
 
     def _items(self) -> list[tuple[str, str]]:
         if self.screen == "options":
@@ -79,12 +106,7 @@ class MainMenu:
                 ("back", "Back"),
             ]
         if self.screen == "levels":
-            items = [
-                (f"level:{lvl.id}", f"{lvl.id}  {lvl.name}")
-                for lvl in list_levels()
-            ]
-            items.append(("back", "Back"))
-            return items
+            return [("back", "Back")]
         if self.screen == "scores":
             return [("back", "Back")]
         return [
@@ -104,9 +126,54 @@ class MainMenu:
     def _enter_levels(self) -> None:
         self._root_selected = self.selected
         self.screen = "levels"
-        # Highlight last-played / current level
-        self.selected = max(0, min(self.level - 1, self.max_level - 1))
+        self._score_boards = load_highscores()
+        if self.level == SURVIVAL_LEVEL_ID:
+            self.level_tab = "survival"
+            self.selected = 0
+        else:
+            self.level_tab = "campaign"
+            self.selected = max(0, min(self.level - 1, MAX_CAMPAIGN_LEVEL - 1))
         self._sfx("ui_confirm")
+
+    def _switch_level_tab(self, delta: int) -> None:
+        idx = LEVEL_TABS.index(self.level_tab)
+        self.level_tab = LEVEL_TABS[(idx + delta) % len(LEVEL_TABS)]
+        if self.level_tab == "campaign":
+            if 1 <= self.level <= MAX_CAMPAIGN_LEVEL:
+                self.selected = self.level - 1
+            else:
+                self.selected = 0
+        else:
+            self.selected = 0
+        self._sfx("ui_select")
+
+    def _move_level_selection(self, direction: str) -> None:
+        if self.level_tab == "survival":
+            if direction == "up":
+                self.selected = 0
+            elif direction == "down":
+                self.selected = 1
+            elif direction in ("left", "right"):
+                return
+        else:
+            nxt = _CAMPAIGN_NAV.get(self.selected, {}).get(direction)
+            if nxt is not None:
+                self.selected = nxt
+        self._sfx("ui_select")
+
+    def _confirm_level_selection(self, action: MenuAction) -> None:
+        if self.level_tab == "campaign":
+            if self.selected >= len(self._campaign_levels()):
+                self._leave_submenu()
+                return
+            self.level = self._campaign_levels()[self.selected].id
+        else:
+            if self.selected != 0:
+                self._leave_submenu()
+                return
+            self.level = SURVIVAL_LEVEL_ID
+        self._sfx("ui_confirm")
+        action.start_game = True
 
     def _enter_scores(self) -> None:
         self._root_selected = self.selected
@@ -142,6 +209,33 @@ class MainMenu:
                 self._leave_submenu()
             return action
 
+        if self.screen == "levels":
+            if key == pygame.K_TAB:
+                self._switch_level_tab(+1)
+                return action
+            if self.level_tab == "survival" and key == pygame.K_LEFT:
+                self._switch_level_tab(-1)
+                return action
+            if self.level_tab == "campaign" and key == pygame.K_RIGHT and self.selected in (1, 3):
+                self._switch_level_tab(+1)
+                return action
+            if self.level_tab == "campaign":
+                if key == pygame.K_LEFT:
+                    self._move_level_selection("left")
+                    return action
+                if key == pygame.K_RIGHT:
+                    self._move_level_selection("right")
+                    return action
+            if key in (pygame.K_UP, pygame.K_w):
+                self._move_level_selection("up")
+                return action
+            if key in (pygame.K_DOWN, pygame.K_s):
+                self._move_level_selection("down")
+                return action
+            if key in (pygame.K_RETURN, pygame.K_SPACE):
+                self._confirm_level_selection(action)
+            return action
+
         if key in (pygame.K_UP, pygame.K_w):
             self.selected = (self.selected - 1) % n
             self._sfx("ui_select")
@@ -165,10 +259,6 @@ class MainMenu:
                 self._enter_scores()
             elif kind == "back":
                 self._leave_submenu()
-            elif kind.startswith("level:"):
-                self.level = int(kind.split(":", 1)[1])
-                self._sfx("ui_confirm")
-                action.start_game = True
             elif kind in ("mode", "music", "sfx"):
                 self._nudge_field(+1)
         return action
@@ -295,58 +385,117 @@ class MainMenu:
         self._draw_hints(screen)
 
     def _draw_levels_screen(self, screen: pygame.Surface) -> None:
-        """Dedicated level picker: header, spaced list, blurb for selection."""
+        """Campaign | Survival tabs; campaign uses a 2-column grid."""
         header = self.big_font.render("Select Level", True, _TITLE)
-        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 56)))
+        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 48)))
 
-        items = self._items()
-        level_items = [it for it in items if it[0].startswith("level:")]
-        back_item = next(it for it in items if it[0] == "back")
+        tab_y = 92
+        tab_labels = ("Campaign", "Survival")
+        for i, key in enumerate(LEVEL_TABS):
+            selected = key == self.level_tab
+            tab_rect = pygame.Rect(0, 0, 140, 34)
+            tab_rect.center = (SCREEN_WIDTH // 2 - 78 + i * 156, tab_y)
+            self._draw_card_chrome(screen, tab_rect, selected)
+            color = _SELECTED if selected else _HUD_DIM
+            text = self.font.render(tab_labels[i], True, color)
+            screen.blit(text, text.get_rect(center=tab_rect.center))
 
-        list_top = 100
         cx = SCREEN_WIDTH // 2
-        card_h, card_gap = _LEVEL_CARD_H, _LEVEL_CARD_GAP
-        for i, (kind, _label) in enumerate(level_items):
-            selected = i == self.selected
-            card_rect = pygame.Rect(0, 0, _CARD_W, card_h)
-            card_rect.center = (cx, list_top + i * (card_h + card_gap) + card_h // 2)
-            self._draw_card_chrome(screen, card_rect, selected)
+        card_h = _LEVEL_CARD_H
+        blurb_y = 0
 
-            lvl = get_level(int(kind.split(":", 1)[1]))
-            text_color = _SELECTED if selected else _HUD_DIM
-            badge = pygame.Rect(card_rect.left + 14, card_rect.centery - 12, 28, 24)
-            pygame.draw.rect(
-                screen,
-                lvl.theme.barrier_edge if selected else _CARD_BORDER,
-                badge,
-                border_radius=6,
-            )
-            badge_text = "S" if lvl.survival else str(lvl.id)
-            id_surf = self.font.render(badge_text, True, (12, 8, 24))
-            screen.blit(id_surf, id_surf.get_rect(center=badge.center))
-            name_surf = self.font.render(lvl.name, True, text_color)
-            screen.blit(
-                name_surf,
-                name_surf.get_rect(midleft=(badge.right + 16, card_rect.centery)),
-            )
+        if self.level_tab == "campaign":
+            grid_top = 138
+            col_step = _GRID_CARD_W + _GRID_COL_GAP
+            left_x = cx - col_step // 2
+            right_x = cx + col_step // 2
+            row_step = card_h + _LEVEL_CARD_GAP
 
-        back_index = len(level_items)
-        back_selected = self.selected == back_index
-        back_y = list_top + len(level_items) * (card_h + card_gap) + 12
-        back_rect = pygame.Rect(0, 0, _CARD_W, card_h)
-        back_rect.center = (cx, back_y + card_h // 2)
-        self._draw_card_chrome(screen, back_rect, back_selected)
-        back_color = _SELECTED if back_selected else _HUD_DIM
-        back_surf = self.font.render(back_item[1], True, back_color)
-        screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
+            for i, lvl in enumerate(self._campaign_levels()):
+                row, col = divmod(i, 2)
+                card_x = left_x if col == 0 else right_x
+                card_y = grid_top + row * row_step
+                card_rect = pygame.Rect(0, 0, _GRID_CARD_W, card_h)
+                card_rect.center = (card_x, card_y + card_h // 2)
+                self._draw_level_card(screen, card_rect, lvl, i == self.selected)
 
-        if self.selected < len(level_items):
-            lvl = get_level(int(level_items[self.selected][0].split(":", 1)[1]))
-            blurb = self.font.render(lvl.blurb, True, _NEON_CYAN)
-            screen.blit(
-                blurb,
-                blurb.get_rect(center=(SCREEN_WIDTH // 2, back_rect.bottom + 28)),
-            )
+            back_y = grid_top + 3 * row_step + 4
+            back_rect = pygame.Rect(0, 0, _CARD_W, card_h)
+            back_rect.center = (cx, back_y + card_h // 2)
+            self._draw_card_chrome(screen, back_rect, self.selected >= len(self._campaign_levels()))
+            back_color = _SELECTED if self.selected >= len(self._campaign_levels()) else _HUD_DIM
+            back_surf = self.font.render("Back", True, back_color)
+            screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
+            blurb_y = back_rect.bottom + 22
+
+            if self.selected < len(self._campaign_levels()):
+                blurb_lvl = self._campaign_levels()[self.selected]
+                blurb = self.font.render(blurb_lvl.blurb, True, _NEON_CYAN)
+                screen.blit(blurb, blurb.get_rect(center=(cx, blurb_y)))
+        else:
+            surv = self._survival_level()
+            card_rect = pygame.Rect(0, 0, _CARD_W, card_h + 8)
+            card_rect.center = (cx, 168)
+            self._draw_level_card(screen, card_rect, surv, self.selected == 0, badge="S")
+
+            board_key = board_key_for_mode(self.mode)
+            board = self._score_boards.get(board_key, [])
+            if board:
+                best = self.font.render(
+                    f"Best ({self.mode}): {format_time_ms(board[0].time_ms)}",
+                    True,
+                    _SELECTED,
+                )
+                screen.blit(best, best.get_rect(center=(cx, card_rect.bottom + 28)))
+
+            blurb = self.font.render(surv.blurb, True, _NEON_CYAN)
+            screen.blit(blurb, blurb.get_rect(center=(cx, card_rect.bottom + 58)))
+
+            back_rect = pygame.Rect(0, 0, _CARD_W, card_h)
+            back_rect.center = (cx, card_rect.bottom + 108)
+            self._draw_card_chrome(screen, back_rect, self.selected == 1)
+            back_color = _SELECTED if self.selected == 1 else _HUD_DIM
+            back_surf = self.font.render("Back", True, back_color)
+            screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
+
+    def _draw_level_card(
+        self,
+        screen: pygame.Surface,
+        card_rect: pygame.Rect,
+        lvl,
+        selected: bool,
+        *,
+        badge: str | None = None,
+    ) -> None:
+        self._draw_card_chrome(screen, card_rect, selected)
+        text_color = _SELECTED if selected else _HUD_DIM
+        badge_text = badge if badge is not None else str(lvl.id)
+        badge_w = 26 if len(badge_text) > 1 else 28
+        badge_rect = pygame.Rect(
+            card_rect.left + 10,
+            card_rect.centery - 12,
+            badge_w,
+            24,
+        )
+        pygame.draw.rect(
+            screen,
+            lvl.theme.barrier_edge if selected else _CARD_BORDER,
+            badge_rect,
+            border_radius=6,
+        )
+        id_surf = self.font.render(badge_text, True, (12, 8, 24))
+        screen.blit(id_surf, id_surf.get_rect(center=badge_rect.center))
+        name_surf = self.font.render(lvl.name, True, text_color)
+        max_name_w = card_rect.width - badge_rect.width - 28
+        if name_surf.get_width() > max_name_w:
+            name = lvl.name
+            while len(name) > 3 and self.font.size(name + "…")[0] > max_name_w:
+                name = name[:-1]
+            name_surf = self.font.render(name + "…", True, text_color)
+        screen.blit(
+            name_surf,
+            name_surf.get_rect(midleft=(badge_rect.right + 10, card_rect.centery)),
+        )
 
     def _draw_scores_screen(self, screen: pygame.Surface) -> None:
         header = self.big_font.render("High Scores", True, _TITLE)
@@ -428,6 +577,14 @@ class MainMenu:
                 [
                     ("vol", None),
                     ("text", "tabs"),
+                    ("sep", None),
+                ]
+            )
+        if self.screen == "levels":
+            parts.extend(
+                [
+                    ("text", "Tab"),
+                    ("text_dim", "mode"),
                     ("sep", None),
                 ]
             )

@@ -1,15 +1,4 @@
-## Purpose
-
-Random powerup drops on ball hits and weapon modes (TIME / STICKY / DRILL) with one active weapon at a time. TIME behavior differs between campaign (barrier seconds) and Survival (spawn pause).
-
-## Requirements
-
-### Requirement: Random power drops
-When a ball is destroyed or split by a weapon hit, the game MAY spawn a powerup pickup at random. Pickup types SHALL include TIME, STICKY, and DRILL.
-
-#### Scenario: Drop can appear
-- **WHEN** a ball is hit and the random drop roll succeeds
-- **THEN** a powerup pickup of one of the supported types appears near the hit
+## MODIFIED Requirements
 
 ### Requirement: One weapon at a time
 Collecting STICKY or DRILL SHALL set the player's weapon mode to that power and replace any previous weapon mode. Default mode SHALL be the growing harpoon. Collecting TIME on a campaign level SHALL add seconds to the shared time barrier and SHALL NOT change weapon mode. Collecting TIME during Survival SHALL briefly pause ball spawns and SHALL NOT add time-barrier seconds or change weapon mode.
@@ -25,10 +14,3 @@ Collecting STICKY or DRILL SHALL set the player's weapon mode to that power and 
 #### Scenario: TIME pauses Survival spawns
 - **WHEN** the player collects a TIME powerup during Survival
 - **THEN** ball spawns pause for a short configured duration and weapon mode is unchanged
-
-### Requirement: Default weapon is growing harpoon
-Until the player collects STICKY or DRILL, shots SHALL use the default growing harpoon behavior from projectile-combat.
-
-#### Scenario: Fresh level default
-- **WHEN** a level starts
-- **THEN** the player weapon mode is the default growing harpoon

@@ -59,6 +59,8 @@ from consts import (
     SURVIVAL_SPAWN_RAMP_MS,
     SURVIVAL_SPAWN_SPEED,
     SURVIVAL_SPAWN_Y,
+    SURVIVAL_SPEED_BONUS_MAX,
+    SURVIVAL_SPEED_RAMP_MS,
     TIME_BAR_BG,
     TIME_BAR_EDGE,
     TIME_BAR_FILL,
@@ -241,7 +243,10 @@ class Game:
         margin = 60
         x = random.randint(PLAY_LEFT + margin, PLAY_RIGHT - margin)
         direction = random.choice((-1.0, 1.0))
-        speed = SURVIVAL_SPAWN_SPEED + min(1.2, self.survival_elapsed_ms / 90_000)
+        speed = SURVIVAL_SPAWN_SPEED + min(
+            SURVIVAL_SPEED_BONUS_MAX,
+            self.survival_elapsed_ms / SURVIVAL_SPEED_RAMP_MS,
+        )
         self.balls.add(
             Ball(
                 self._ball_base_image,

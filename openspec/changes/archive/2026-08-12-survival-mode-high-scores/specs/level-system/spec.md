@@ -1,8 +1,4 @@
-## Purpose
-
-Authored multi-level campaign plus selectable Survival: level definitions with barriers/doors and time budgets, loading into a match, and advance-on-clear progression for campaign arenas.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Level definitions
 The game SHALL define five authored campaign levels plus a final selectable Survival level, each with an id and display name. Campaign levels SHALL include initial balls, `time_seconds`, barriers, and doors (as needed), and SHALL NOT rely on platforms. The Survival level SHALL be identified as Survival mode (endless) rather than a clearable campaign arena with a draining time budget.
@@ -18,13 +14,6 @@ The game SHALL define five authored campaign levels plus a final selectable Surv
 #### Scenario: Survival selectable
 - **WHEN** the player selects Survival from level select and starts Play
 - **THEN** a Survival match loads instead of a normal campaign clear arena
-
-### Requirement: Load level into match
-Starting a match with a level id SHALL spawn that level's balls, barriers/doors, and (for campaign) time budget.
-
-#### Scenario: Load level 1
-- **WHEN** Play starts with level 1 selected
-- **THEN** level 1 balls, geometry, and time barrier appear as defined
 
 ### Requirement: Advance on clear
 Clearing all balls on a non-final campaign level SHALL advance to the next campaign level (or prompt to continue into it). Clearing the final campaign level (the last clearable arena before Survival) SHALL show the win end state and SHALL NOT auto-advance into Survival. Advancing between campaign levels SHALL refill time from the next level's `time_seconds` and reset weapon mode to default harpoon.

@@ -27,11 +27,17 @@ UI_SURFACE = (17, 17, 24)  # #111118
 UI_SURFACE_RAISED = (22, 22, 34)
 UI_BORDER = (26, 26, 43)  # #1a1a2b
 UI_FG = (240, 240, 245)  # #f0f0f5
-UI_MUTED = (110, 110, 128)  # #6e6e80
+UI_MUTED = (110, 110, 128)  # #6e6e80 — footer / secondary
+UI_IDLE = (220, 224, 236)  # bright unselected menu labels
+UI_IDLE_BORDER = (120, 124, 150)  # unselected card border
 UI_NEON_CYAN = (0, 240, 255)  # #00f0ff
 UI_NEON_MAGENTA = (255, 0, 85)  # #ff0055
 UI_NEON_GOLD = (255, 183, 0)  # #ffb700
 UI_OVERLAY = (8, 4, 20, 180)
+# HUD text on brick panel (high contrast vs brown)
+HUD_TEXT = (255, 236, 200)
+HUD_TEXT_DIM = (230, 210, 170)
+HUD_TEXT_PLATE = (28, 16, 12, 200)
 
 # Bundled monospace UI font (JetBrains Mono OFL — see assets/fonts/)
 UI_FONT_REGULAR = ASSETS / "fonts" / "JetBrainsMono-Regular.ttf"
@@ -165,10 +171,12 @@ TIME_BAR_FILL_LOW = (255, 90, 40)
 TIME_BAR_EDGE = (255, 120, 160)
 TIME_BAR_BG = (20, 8, 18)
 
-# Bottom panel chrome (cyberpunk strip — aliases UI tokens)
-PANEL_FRAME = UI_NEON_CYAN
-PANEL_FRAME_INNER = UI_BORDER
-PANEL_ACCENT = UI_NEON_MAGENTA
+# Bottom panel chrome (Pang-inspired brick strip)
+PANEL_BRICK_A = (118, 72, 48)
+PANEL_BRICK_B = (92, 54, 36)
+PANEL_BRICK_MORTAR = (48, 28, 18)
+PANEL_FRAME = (210, 170, 110)
+PANEL_FRAME_INNER = (40, 22, 14)
 
 PLAYER_SCALE = SPRITE_SCALE  # alias — documented scale lives in assets.SPRITE_SCALE
 # Shrink opaque bounds a bit so collisions feel fair vs transparent padding

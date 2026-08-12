@@ -30,6 +30,9 @@ from consts import (
     FPS,
     HUD_PANEL_HEIGHT,
     HIGHSCORE_NAME_LEN,
+    HUD_TEXT,
+    HUD_TEXT_DIM,
+    HUD_TEXT_PLATE,
     MAX_BULLETS,
     P1_KEYS,
     P1_SPAWN_X_OFFSET,
@@ -38,7 +41,10 @@ from consts import (
     P2_RUN_FRAMES,
     P2_SPAWN_X_OFFSET,
     P2_GUN_SPRITE,
+    PANEL_BRICK_A,
+    PANEL_BRICK_B,
     PANEL_FRAME,
+    PANEL_FRAME_INNER,
     PLAY_BOTTOM,
     PLAY_LEFT,
     PLAY_RIGHT,
@@ -78,7 +84,6 @@ from ui_chrome import (
     draw_dim_overlay,
     draw_overlay_panel,
     draw_panel,
-    draw_status_panel_chrome,
     load_ui_fonts,
 )
 from highscores import (
@@ -442,7 +447,26 @@ class Game:
 
     def _draw_status_panel(self) -> None:
         panel = pygame.Rect(0, PLAY_BOTTOM, SCREEN_WIDTH, HUD_PANEL_HEIGHT)
-        draw_status_panel_chrome(self.screen, panel)
+        brick_h, brick_w = 14, 28
+        for row, y in enumerate(range(panel.top, panel.bottom, brick_h)):
+            offset = (brick_w // 2) if row % 2 else 0
+            for x in range(panel.left - offset, panel.right + brick_w, brick_w):
+                color = PANEL_BRICK_A if ((x // brick_w) + row) % 2 == 0 else PANEL_BRICK_B
+                pygame.draw.rect(
+                    self.screen,
+                    color,
+                    pygame.Rect(x, y, brick_w - 1, brick_h - 1),
+                )
+        pygame.draw.rect(self.screen, PANEL_FRAME, panel, width=3)
+        pygame.draw.line(
+            self.screen,
+            PANEL_FRAME,
+            (0, PLAY_BOTTOM),
+            (SCREEN_WIDTH, PLAY_BOTTOM),
+            2,
+        )
+        inner = panel.inflate(-10, -10)
+        pygame.draw.rect(self.screen, PANEL_FRAME_INNER, inner, width=1)
 
     def _apply_powerup(self, power: Powerup, player: Player) -> None:
         if power.kind == "TIME":
@@ -616,19 +640,27 @@ class Game:
                 self._draw_survival_chronometer()
             else:
                 self._draw_time_barrier()
-            # Level plate on the right side of the bottom panel
+            # Level plate on the right — dark plate for contrast on brick
             if self._is_survival():
-                label = self.font.render("SURVIVAL", True, PANEL_FRAME)
+                label = self.font.render("SURVIVAL", True, HUD_TEXT)
             else:
                 label = self.font.render(
                     f"LEVEL {self.current_level.id}",
                     True,
-                    PANEL_FRAME,
+                    HUD_TEXT,
                 )
-            name = self.font.render(self.current_level.name, True, UI_MUTED)
-            lx = SCREEN_WIDTH - max(label.get_width(), name.get_width()) - 20
-            self.screen.blit(label, (lx, PLAY_BOTTOM + 14))
-            self.screen.blit(name, (lx, PLAY_BOTTOM + 40))
+            name = self.font.render(self.current_level.name, True, HUD_TEXT_DIM)
+            pad = 10
+            plate_w = max(label.get_width(), name.get_width()) + pad * 2
+            plate_h = label.get_height() + name.get_height() + 10
+            plate = pygame.Rect(0, 0, plate_w, plate_h)
+            plate.topright = (SCREEN_WIDTH - 12, PLAY_BOTTOM + 10)
+            plate_surf = pygame.Surface(plate.size, flags=pygame.SRCALPHA)
+            plate_surf.fill(HUD_TEXT_PLATE)
+            self.screen.blit(plate_surf, plate.topleft)
+            pygame.draw.rect(self.screen, PANEL_FRAME, plate, width=1, border_radius=4)
+            self.screen.blit(label, (plate.left + pad, plate.top + 4))
+            self.screen.blit(name, (plate.left + pad, plate.top + 4 + label.get_height() + 2))
 
             living = self._living_players()
             # Weapon mode under the time / chronometer (inside the panel)

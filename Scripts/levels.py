@@ -456,13 +456,12 @@ def build_arena_background(
     for y in range(top + 2, bottom, 4):
         pygame.draw.line(surf, (0, 0, 0), (0, y), (SCREEN_WIDTH, y))
 
-    floor_y = SCREEN_HEIGHT if fill_window else PLAY_BOTTOM
-    pygame.draw.line(
-        surf, theme.floor_a, (0, floor_y - 3), (SCREEN_WIDTH, floor_y - 3), 2
-    )
-    pygame.draw.line(
-        surf, theme.floor_b, (0, floor_y - 6), (SCREEN_WIDTH, floor_y - 6), 1
-    )
+    # Menu full-bleed: subtle floor accent. In-play the brick HUD edge is the floor seam.
+    if fill_window:
+        floor_y = SCREEN_HEIGHT
+        pygame.draw.line(
+            surf, theme.floor_a, (0, floor_y - 2), (SCREEN_WIDTH, floor_y - 2), 2
+        )
     return surf
 
 

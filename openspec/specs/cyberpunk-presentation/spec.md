@@ -36,3 +36,10 @@ Shots SHALL use a tiled vertical chain-link shaft for the growing projectile bod
 #### Scenario: Default shaft color
 - **WHEN** the player fires in default harpoon mode
 - **THEN** the chain shaft uses a light gray steel tint
+
+### Requirement: UI palette alignment
+Match presentation MAY share the same neon cyan / magenta / gold accents used by non-level UI chrome, but SHALL NOT require changing level geometry, Craftpix player sheets, or harpoon art rules defined elsewhere in this capability.
+
+#### Scenario: Match art unchanged
+- **WHEN** a match is playing after the UI chrome redesign
+- **THEN** the player continues to use the Cyborg asset set and projectile chain/arrow rules remain as specified for match presentation

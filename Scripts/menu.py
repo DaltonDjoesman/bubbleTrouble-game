@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Literal
 import pygame
 
 from consts import (
-    SCREEN_HEIGHT,
     SCREEN_WIDTH,
     UI_FG,
     UI_MUTED,
     UI_NEON_CYAN,
     UI_NEON_GOLD,
+    UI_NEON_MAGENTA,
     VOLUME_MAX,
 )
 from highscores import board_key_for_mode, format_time_ms, load_highscores
@@ -25,6 +25,7 @@ from levels import (
     list_levels,
 )
 from ui_chrome import (
+    CONTENT_BOTTOM,
     CONTENT_TOP,
     arrow_color,
     draw_card,
@@ -34,6 +35,7 @@ from ui_chrome import (
     draw_scanlines,
     draw_screen_bg,
     draw_system_line,
+    draw_volume_segments,
     get_small_font,
     selection_color,
 )
@@ -114,7 +116,7 @@ class MainMenu:
             return [
                 ("music", f"Music   {music}/{VOLUME_MAX}"),
                 ("sfx", f"SFX     {sfx}/{VOLUME_MAX}"),
-                ("back", "BACK"),
+                ("back", "BACK TO MENU"),
             ]
         if self.screen == "levels":
             return [("back", "BACK")]
@@ -339,17 +341,24 @@ class MainMenu:
             self._draw_levels_screen(screen)
         elif self.screen == "scores":
             self._draw_scores_screen(screen)
+        elif self.screen == "options":
+            self._draw_options_screen(screen)
         else:
             self._draw_list_screen(screen)
 
         self._draw_footer(screen)
         draw_scanlines(screen)
 
+    @staticmethod
+    def _content_start_y(block_h: int) -> int:
+        """Vertically center a content block in the header→footer well."""
+        well_h = CONTENT_BOTTOM - CONTENT_TOP
+        return CONTENT_TOP + max(12, (well_h - block_h) // 2)
+
     def _draw_list_screen(self, screen: pygame.Surface) -> None:
         items = self._items()
         total_h = len(items) * _CARD_H + (len(items) - 1) * _CARD_GAP
-        start_y = CONTENT_TOP + 36 + (SCREEN_HEIGHT - CONTENT_TOP - 72 - total_h) // 2
-        start_y = max(CONTENT_TOP + 40, min(start_y, SCREEN_HEIGHT - 72 - total_h - 20))
+        start_y = self._content_start_y(total_h)
         cx = SCREEN_WIDTH // 2
 
         for i, (kind, label) in enumerate(items):
@@ -361,18 +370,9 @@ class MainMenu:
             text_color = selection_color(selected)
             a_color = arrow_color(selected)
 
-            if kind in ("mode", "music", "sfx"):
-                if kind == "mode":
-                    name, value = "MODE", self.mode
-                elif kind == "music":
-                    name = "MUSIC"
-                    value = f"{self.audio.music_volume if self.audio else 0}/{VOLUME_MAX}"
-                else:
-                    name = "SFX"
-                    value = f"{self.audio.sfx_volume if self.audio else 0}/{VOLUME_MAX}"
-
-                name_surf = self.font.render(name, True, text_color)
-                val_surf = self.font.render(value, True, text_color)
+            if kind == "mode":
+                name_surf = self.font.render("MODE", True, text_color)
+                val_surf = self.font.render(self.mode, True, text_color)
                 screen.blit(
                     name_surf,
                     name_surf.get_rect(midleft=(card_rect.left + 28, card_rect.centery)),
@@ -386,30 +386,79 @@ class MainMenu:
                 text = self.font.render(label, True, text_color)
                 screen.blit(text, text.get_rect(center=card_rect.center))
 
+    def _draw_options_screen(self, screen: pygame.Surface) -> None:
+        """Volume segment cards + BACK TO MENU, vertically centered."""
+        music = self.audio.music_volume if self.audio else 0
+        sfx = self.audio.sfx_volume if self.audio else 0
+        vol_h = 78
+        gap = 20
+        back_h = 48
+        block_h = vol_h * 2 + gap * 2 + back_h
+        start_y = self._content_start_y(block_h)
+        cx = SCREEN_WIDTH // 2
+
+        specs = (
+            (0, "MUSIC VOLUME", music, UI_NEON_CYAN),
+            (1, "SFX VOLUME", sfx, UI_NEON_MAGENTA),
+        )
+        for idx, label, value, fill in specs:
+            selected = self.selected == idx
+            card = pygame.Rect(0, 0, _CARD_W, vol_h)
+            card.midtop = (cx, start_y + idx * (vol_h + gap))
+            draw_card(screen, card, selected=selected)
+
+            name_surf = self.font.render(label, True, UI_FG)
+            val_surf = self.font.render(f"{value} / {VOLUME_MAX}", True, fill)
+            screen.blit(
+                name_surf,
+                name_surf.get_rect(midleft=(card.left + 18, card.top + 22)),
+            )
+            screen.blit(
+                val_surf,
+                val_surf.get_rect(midright=(card.right - 18, card.top + 22)),
+            )
+            bar = pygame.Rect(card.left + 18, card.bottom - 28, card.width - 36, 14)
+            draw_volume_segments(screen, bar, value, max_value=VOLUME_MAX, fill_color=fill)
+
+        back_sel = self.selected == 2
+        back = pygame.Rect(0, 0, _CARD_W, back_h)
+        back.midtop = (cx, start_y + 2 * (vol_h + gap))
+        draw_card(screen, back, selected=back_sel)
+        back_surf = self.font.render("BACK TO MENU", True, selection_color(back_sel))
+        screen.blit(back_surf, back_surf.get_rect(center=back.center))
+
     def _draw_levels_screen(self, screen: pygame.Surface) -> None:
         """Campaign | Survival tabs; campaign uses a 2-column grid."""
-        tab_y = CONTENT_TOP + 28
+        tab_h = 34
+        tab_gap = 28
+        card_h = _LEVEL_CARD_H
+        row_step = card_h + _LEVEL_CARD_GAP
+        cx = SCREEN_WIDTH // 2
+
+        if self.level_tab == "campaign":
+            # tabs + gap + 3 rows + gap + back + blurb space
+            block_h = tab_h + tab_gap + 3 * row_step + 8 + card_h + 28
+        else:
+            block_h = tab_h + tab_gap + (card_h + 8) + 100 + card_h
+
+        block_top = self._content_start_y(block_h)
+        tab_y = block_top + tab_h // 2
+
         tab_labels = ("CAMPAIGN", "SURVIVAL")
         for i, key in enumerate(LEVEL_TABS):
             selected = key == self.level_tab
-            tab_rect = pygame.Rect(0, 0, 148, 34)
+            tab_rect = pygame.Rect(0, 0, 148, tab_h)
             tab_rect.center = (SCREEN_WIDTH // 2 - 82 + i * 164, tab_y)
             draw_card(screen, tab_rect, selected=selected, radius=4)
-            color = selection_color(selected) if selected else UI_NEON_CYAN
-            if not selected:
-                color = UI_MUTED
+            color = selection_color(selected)
             text = self.font.render(tab_labels[i], True, color)
             screen.blit(text, text.get_rect(center=tab_rect.center))
 
-        cx = SCREEN_WIDTH // 2
-        card_h = _LEVEL_CARD_H
-
         if self.level_tab == "campaign":
-            grid_top = tab_y + 36
+            grid_top = block_top + tab_h + tab_gap
             col_step = _GRID_CARD_W + _GRID_COL_GAP
             left_x = cx - col_step // 2
             right_x = cx + col_step // 2
-            row_step = card_h + _LEVEL_CARD_GAP
 
             for i, lvl in enumerate(self._campaign_levels()):
                 row, col = divmod(i, 2)
@@ -419,7 +468,7 @@ class MainMenu:
                 card_rect.center = (card_x, card_y + card_h // 2)
                 self._draw_level_card(screen, card_rect, lvl, i == self.selected)
 
-            back_y = grid_top + 3 * row_step + 4
+            back_y = grid_top + 3 * row_step + 8
             back_rect = pygame.Rect(0, 0, _CARD_W, card_h)
             back_rect.center = (cx, back_y + card_h // 2)
             back_sel = self.selected >= len(self._campaign_levels())
@@ -430,11 +479,11 @@ class MainMenu:
             if self.selected < len(self._campaign_levels()):
                 blurb_lvl = self._campaign_levels()[self.selected]
                 blurb = get_small_font().render(blurb_lvl.blurb, True, UI_NEON_CYAN)
-                screen.blit(blurb, blurb.get_rect(center=(cx, back_rect.bottom + 20)))
+                screen.blit(blurb, blurb.get_rect(center=(cx, back_rect.bottom + 18)))
         else:
             surv = self._survival_level()
             card_rect = pygame.Rect(0, 0, _CARD_W, card_h + 8)
-            card_rect.center = (cx, tab_y + 70)
+            card_rect.center = (cx, block_top + tab_h + tab_gap + (card_h + 8) // 2)
             self._draw_level_card(screen, card_rect, surv, self.selected == 0, badge="S")
 
             board_key = board_key_for_mode(self.mode)
@@ -492,11 +541,19 @@ class MainMenu:
         )
 
     def _draw_scores_screen(self, screen: pygame.Surface) -> None:
-        tab_y = CONTENT_TOP + 28
+        tab_h = 34
+        tab_gap = 28
+        list_rows = 5
+        row_step = _LEVEL_CARD_H + _LEVEL_CARD_GAP
+        block_h = tab_h + tab_gap + list_rows * row_step + 16 + _LEVEL_CARD_H
+        block_top = self._content_start_y(block_h)
+        tab_y = block_top + tab_h // 2
+        cx = SCREEN_WIDTH // 2
+
         for i, key in enumerate(SCORE_TABS):
             label = "1P" if key == "1p" else "2P"
             selected = key == self.score_tab
-            tab_rect = pygame.Rect(0, 0, 120, 34)
+            tab_rect = pygame.Rect(0, 0, 120, tab_h)
             tab_rect.center = (SCREEN_WIDTH // 2 - 70 + i * 140, tab_y)
             draw_card(screen, tab_rect, selected=selected, radius=4)
             color = selection_color(selected)
@@ -504,8 +561,7 @@ class MainMenu:
             screen.blit(text, text.get_rect(center=tab_rect.center))
 
         board = self._score_boards.get(self.score_tab, [])
-        list_top = tab_y + 44
-        cx = SCREEN_WIDTH // 2
+        list_top = block_top + tab_h + tab_gap
         if not board:
             empty = self.font.render("No scores yet — survive longer!", True, UI_MUTED)
             screen.blit(empty, empty.get_rect(center=(cx, list_top + 40)))
@@ -514,7 +570,7 @@ class MainMenu:
                 row = pygame.Rect(0, 0, _CARD_W, _LEVEL_CARD_H)
                 row.center = (
                     cx,
-                    list_top + i * (_LEVEL_CARD_H + _LEVEL_CARD_GAP) + _LEVEL_CARD_H // 2,
+                    list_top + i * row_step + _LEVEL_CARD_H // 2,
                 )
                 draw_card(screen, row, selected=False)
                 rank = self.font.render(f"{i + 1}.", True, UI_NEON_CYAN)
@@ -524,7 +580,7 @@ class MainMenu:
                 screen.blit(name, name.get_rect(midleft=(row.left + 70, row.centery)))
                 screen.blit(time_s, time_s.get_rect(midright=(row.right - 24, row.centery)))
 
-        back_y = list_top + 5 * (_LEVEL_CARD_H + _LEVEL_CARD_GAP) + 16
+        back_y = list_top + list_rows * row_step + 16
         back_rect = pygame.Rect(0, 0, _CARD_W, _LEVEL_CARD_H)
         back_rect.center = (cx, back_y + _LEVEL_CARD_H // 2)
         draw_card(screen, back_rect, selected=True)
@@ -532,9 +588,9 @@ class MainMenu:
         screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
 
     def _draw_footer(self, screen: pygame.Surface) -> None:
-        draw_footer_band(screen)
+        """Single hint row + quiet system line; padded from cyan top edge."""
+        band = draw_footer_band(screen)
         if self.screen == "root":
-            self._draw_play_controls(screen)
             hints: list[tuple[list[str], str]] = [
                 (["W", "S"], "Navigate"),
                 (["A", "D"], "Adjust"),
@@ -544,7 +600,6 @@ class MainMenu:
             hints = [
                 (["W", "S"], "Navigate"),
                 (["A", "D"], "Adjust"),
-                (["ENTER"], "Confirm"),
                 (["ESC"], "Back"),
             ]
         elif self.screen == "levels":
@@ -560,16 +615,7 @@ class MainMenu:
                 (["ENTER"], "Confirm"),
                 (["ESC"], "Back"),
             ]
-        hint_y = SCREEN_HEIGHT - 40
+        # Pad below cyan edge; leave room for system line at bottom
+        hint_y = band.top + 28
         draw_hint_row(screen, hints, center_y=hint_y, font=get_small_font())
-        draw_system_line(screen)
-
-    def _draw_play_controls(self, screen: pygame.Surface) -> None:
-        """Gameplay key legend above the nav footer."""
-        y = SCREEN_HEIGHT - 58
-        small = get_small_font()
-        if self.mode == "2P":
-            line = small.render("P1  A/D + SPACE   ·   P2  ←/→ + ENTER", True, UI_MUTED)
-        else:
-            line = small.render("A/D move  ·  SPACE fire", True, UI_MUTED)
-        screen.blit(line, line.get_rect(center=(SCREEN_WIDTH // 2, y)))
+        draw_system_line(screen, y=band.bottom - 10)

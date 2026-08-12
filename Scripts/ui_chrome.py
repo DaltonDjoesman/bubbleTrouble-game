@@ -15,6 +15,8 @@ from consts import (
     UI_FONT_SIZE,
     UI_FONT_SMALL_SIZE,
     UI_FONT_TITLE_SIZE,
+    UI_IDLE,
+    UI_IDLE_BORDER,
     UI_MUTED,
     UI_NEON_CYAN,
     UI_NEON_GOLD,
@@ -26,7 +28,7 @@ from consts import (
 )
 
 # Layout bands (800×600 shell)
-HEADER_H = 56
+HEADER_H = 112
 FOOTER_H = 72
 CONTENT_TOP = HEADER_H
 CONTENT_BOTTOM = SCREEN_HEIGHT - FOOTER_H
@@ -140,11 +142,14 @@ def draw_header_brand(
     pygame.draw.line(
         surf, UI_NEON_MAGENTA, (0, HEADER_H - 1), (SCREEN_WIDTH, HEADER_H - 1), 2
     )
-    draw_title_glow(surf, title, (SCREEN_WIDTH // 2, HEADER_H // 2 - (8 if subtitle else 0)))
+    # Generous top padding; clear title↔subtitle gap when both present
+    title_center_y = 44 if subtitle else HEADER_H // 2
+    title_rect = draw_title_glow(surf, title, (SCREEN_WIDTH // 2, title_center_y))
     if subtitle:
         small = get_small_font()
         sub = small.render(subtitle, True, UI_NEON_MAGENTA)
-        surf.blit(sub, sub.get_rect(center=(SCREEN_WIDTH // 2, HEADER_H - 14)))
+        # midtop keeps subtitle horizontally centered under the title
+        surf.blit(sub, sub.get_rect(midtop=(SCREEN_WIDTH // 2, title_rect.bottom + 16)))
 
 
 def draw_footer_band(surf: pygame.Surface) -> pygame.Rect:
@@ -169,8 +174,33 @@ def draw_system_line(
 ) -> None:
     small = get_small_font()
     line = small.render(text, True, UI_MUTED)
-    yy = y if y is not None else SCREEN_HEIGHT - 12
+    yy = y if y is not None else SCREEN_HEIGHT - 10
     surf.blit(line, line.get_rect(midbottom=(SCREEN_WIDTH // 2, yy)))
+
+
+def draw_volume_segments(
+    surf: pygame.Surface,
+    rect: pygame.Rect,
+    value: int,
+    *,
+    max_value: int = 10,
+    fill_color: tuple[int, int, int] = UI_NEON_CYAN,
+) -> None:
+    """Draw a 10-segment volume bar (filled left→right)."""
+    gap = 4
+    empty = (17, 17, 26)
+    border = (34, 34, 48)
+    n = max(1, max_value)
+    seg_w = max(4, (rect.width - gap * (n - 1)) // n)
+    used = n * seg_w + (n - 1) * gap
+    x = rect.left + max(0, (rect.width - used) // 2)
+    filled = max(0, min(n, int(value)))
+    for i in range(n):
+        seg = pygame.Rect(x, rect.top, seg_w, rect.height)
+        color = fill_color if i < filled else empty
+        pygame.draw.rect(surf, color, seg)
+        pygame.draw.rect(surf, border, seg, width=1)
+        x += seg_w + gap
 
 
 def draw_card(
@@ -185,7 +215,7 @@ def draw_card(
     bg = (*UI_SURFACE_RAISED, 230) if selected else (*UI_SURFACE, 210)
     fill.fill(bg)
     surf.blit(fill, rect.topleft)
-    border = UI_NEON_GOLD if selected else (50, 50, 70)
+    border = UI_NEON_GOLD if selected else UI_IDLE_BORDER
     pygame.draw.rect(surf, border, rect, width=2, border_radius=radius)
     if selected:
         inner = rect.inflate(-6, -6)
@@ -213,32 +243,6 @@ def draw_panel(
     pygame.draw.line(
         surf, UI_NEON_MAGENTA, (rect.right - tick, rect.top), (rect.right - 1, rect.top), 2
     )
-
-
-def draw_status_panel_chrome(
-    surf: pygame.Surface,
-    rect: pygame.Rect,
-) -> None:
-    """Cyberpunk bottom HUD strip (replaces Pang brick)."""
-    pygame.draw.rect(surf, UI_SURFACE, rect)
-    # Top accent edge (cyan + magenta dual line)
-    pygame.draw.line(surf, UI_NEON_CYAN, (rect.left, rect.top), (rect.right, rect.top), 2)
-    pygame.draw.line(
-        surf,
-        UI_NEON_MAGENTA,
-        (rect.left, rect.top + 2),
-        (rect.left + 120, rect.top + 2),
-        1,
-    )
-    pygame.draw.line(
-        surf,
-        UI_NEON_MAGENTA,
-        (rect.right - 120, rect.top + 2),
-        (rect.right, rect.top + 2),
-        1,
-    )
-    inner = rect.inflate(-8, -8)
-    pygame.draw.rect(surf, UI_BORDER, inner, width=1)
 
 
 def draw_keycap(
@@ -345,8 +349,8 @@ def draw_overlay_panel(
 
 
 def selection_color(selected: bool) -> tuple[int, int, int]:
-    return UI_NEON_GOLD if selected else UI_MUTED
+    return UI_NEON_GOLD if selected else UI_IDLE
 
 
 def arrow_color(selected: bool) -> tuple[int, int, int]:
-    return UI_NEON_CYAN if selected else UI_MUTED
+    return UI_NEON_CYAN if selected else UI_IDLE

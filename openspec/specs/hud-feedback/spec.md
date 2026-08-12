@@ -1,6 +1,6 @@
 ## Purpose
 
-On-screen HUD for the time barrier / Survival chronometer and clear win / game over messaging with restart guidance. During play, time and level live in a reserved Pang-style bottom status panel.
+On-screen HUD for the time barrier / Survival chronometer and clear win / game over messaging with restart guidance. During play, time and level live in a reserved Pang-style brick bottom status panel; end-state overlays use cyberpunk chrome aligned with the menu visual system.
 
 ## Requirements
 
@@ -42,12 +42,12 @@ While Survival is playing, the bottom status panel SHALL show a numeric elapsed 
 - **THEN** the finalized elapsed time is shown in the end-state messaging
 
 ### Requirement: End-state messaging
-Win and game over states SHALL show clear on-screen text including how to restart.
+Win and game over states SHALL show clear on-screen text including how to restart, presented with cyberpunk overlay chrome consistent with the shared UI visual system.
 
 #### Scenario: Game over message
 - **WHEN** the match enters game over
-- **THEN** a game over message and restart hint are displayed
+- **THEN** a game over message and restart hint are displayed with cyberpunk overlay treatment
 
 #### Scenario: Win message
 - **WHEN** the match enters the won state
-- **THEN** a win message and restart hint are displayed
+- **THEN** a win message and restart hint are displayed with cyberpunk overlay treatment

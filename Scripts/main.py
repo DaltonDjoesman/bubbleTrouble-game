@@ -6,6 +6,7 @@ Run from the repository root:
 from __future__ import annotations
 
 import logging
+import random
 import sys
 from pathlib import Path
 
@@ -49,6 +50,14 @@ from consts import (
     SPIKE_BAND_HEIGHT,
     SPIKE_WIDTH,
     STICKY_MAX_ON_MAP,
+    SURVIVAL_MAX_BALLS,
+    SURVIVAL_SIZE_WEIGHTS,
+    SURVIVAL_SPAWN_INTERVAL_MIN_MS,
+    SURVIVAL_SPAWN_INTERVAL_START_MS,
+    SURVIVAL_SPAWN_PAUSE_MS,
+    SURVIVAL_SPAWN_RAMP_MS,
+    SURVIVAL_SPAWN_SPEED,
+    SURVIVAL_SPAWN_Y,
     TIME_BAR_BG,
     TIME_BAR_EDGE,
     TIME_BAR_FILL,
@@ -124,6 +133,8 @@ class Game:
         self.time_remaining = self.time_max
         self.survival_elapsed_ms = 0
         self._survival_tick_ms = 0
+        self._spawn_next_at = 0
+        self._spawn_pause_until = 0
         self._fire_cooldown_until: dict[int, int] = {}
         self._end_sfx_played = False
         self._notice: str | None = None
@@ -153,6 +164,10 @@ class Game:
     def _reset_survival_clock(self) -> None:
         self.survival_elapsed_ms = 0
         self._survival_tick_ms = pygame.time.get_ticks()
+        now = self._survival_tick_ms
+        # First director spawn after a short beat (starter balls already placed).
+        self._spawn_next_at = now + SURVIVAL_SPAWN_INTERVAL_START_MS
+        self._spawn_pause_until = 0
 
     def _tick_survival_clock(self) -> None:
         """Advance shared Survival chronometer while playing."""
@@ -171,6 +186,59 @@ class Game:
             return
         self._tick_survival_clock()
         self._survival_tick_ms = 0
+
+    def _survival_spawn_interval_ms(self) -> int:
+        """Shrink spawn interval as elapsed Survival time grows."""
+        t = min(1.0, self.survival_elapsed_ms / max(1, SURVIVAL_SPAWN_RAMP_MS))
+        start = SURVIVAL_SPAWN_INTERVAL_START_MS
+        end = SURVIVAL_SPAWN_INTERVAL_MIN_MS
+        return int(start + (end - start) * t)
+
+    def _survival_size_weights(self) -> tuple[int, int, int]:
+        weights = SURVIVAL_SIZE_WEIGHTS[0][1]
+        for elapsed_gate, w in SURVIVAL_SIZE_WEIGHTS:
+            if self.survival_elapsed_ms >= elapsed_gate:
+                weights = w
+            else:
+                break
+        return weights
+
+    def _pause_survival_spawns(self, duration_ms: int = SURVIVAL_SPAWN_PAUSE_MS) -> None:
+        now = pygame.time.get_ticks()
+        self._spawn_pause_until = max(self._spawn_pause_until, now + duration_ms)
+        # Push next spawn past the pause window.
+        self._spawn_next_at = max(self._spawn_next_at, self._spawn_pause_until)
+
+    def _update_survival_spawns(self) -> None:
+        """Continuous ball spawns with ramp + concurrent cap (Survival only)."""
+        if not self._is_survival() or self.state != "playing":
+            return
+        now = pygame.time.get_ticks()
+        if now < self._spawn_pause_until:
+            return
+        if now < self._spawn_next_at:
+            return
+        if len(self.balls) >= SURVIVAL_MAX_BALLS:
+            # Defer until a slot frees; retry soon.
+            self._spawn_next_at = now + 200
+            return
+
+        weights = self._survival_size_weights()
+        tier = random.choices(("S", "M", "L"), weights=weights, k=1)[0]
+        margin = 60
+        x = random.randint(PLAY_LEFT + margin, PLAY_RIGHT - margin)
+        direction = random.choice((-1.0, 1.0))
+        speed = SURVIVAL_SPAWN_SPEED + min(1.2, self.survival_elapsed_ms / 90_000)
+        self.balls.add(
+            Ball(
+                self._ball_base_image,
+                tier,
+                float(x),
+                float(SURVIVAL_SPAWN_Y),
+                (direction * speed, 0.0),
+            )
+        )
+        self._spawn_next_at = now + self._survival_spawn_interval_ms()
 
     def add_time(self, seconds: float) -> None:
         """TIME powerup: add seconds, clamped to this level's budget."""
@@ -374,8 +442,13 @@ class Game:
 
     def _apply_powerup(self, power: Powerup, player: Player) -> None:
         if power.kind == "TIME":
-            self.add_time(TIME_POWER_SECONDS)
-            self._show_notice(f"+{TIME_POWER_SECONDS}s", 1200)
+            if self._is_survival():
+                self._pause_survival_spawns()
+                pause_s = SURVIVAL_SPAWN_PAUSE_MS // 1000
+                self._show_notice(f"SPAWN PAUSE {pause_s}s", 1200)
+            else:
+                self.add_time(TIME_POWER_SECONDS)
+                self._show_notice(f"+{TIME_POWER_SECONDS}s", 1200)
             return
         if power.kind == "STICKY":
             player.weapon_mode = "sticky"
@@ -631,6 +704,7 @@ class Game:
 
                 if self.state == "playing":
                     self._tick_survival_clock()
+                    self._update_survival_spawns()
                     self._drain_time()
                     for door in self._doors:
                         door.update(now, self.balls)

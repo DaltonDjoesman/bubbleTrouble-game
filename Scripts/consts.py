@@ -42,6 +42,22 @@ POWERUP_FALL_MAX = 4.0
 # Crawl gap under barriers/doors so the player can cross (pixels above floor)
 BARRIER_CRAWL_GAP = 72
 
+# Survival spawn director (endless mode)
+SURVIVAL_MAX_BALLS = 12
+SURVIVAL_SPAWN_INTERVAL_START_MS = 2800
+SURVIVAL_SPAWN_INTERVAL_MIN_MS = 900
+SURVIVAL_SPAWN_RAMP_MS = 120_000  # reach min interval over ~2 minutes
+SURVIVAL_SPAWN_PAUSE_MS = 4000  # TIME powerup pauses new spawns
+SURVIVAL_SPAWN_Y = CEILING_Y + 48
+SURVIVAL_SPAWN_SPEED = 2.2
+# Size weight milestones: (elapsed_ms, (S, M, L) weights)
+SURVIVAL_SIZE_WEIGHTS = (
+    (0, (80, 20, 0)),
+    (45_000, (50, 40, 10)),
+    (90_000, (25, 45, 30)),
+    (150_000, (10, 40, 50)),
+)
+
 # Ball size tiers: large → medium → small
 BALL_SIZES = {
     "L": {"scale": 0.18, "bounce": -14, "next": "M"},

@@ -6,8 +6,8 @@
 
 ## 2. Spawn director
 
-- [ ] 2.1 Implement continuous ball spawns with difficulty ramp (interval + size weighting) and concurrent-ball cap
-- [ ] 2.2 Make TIME powerup pause spawns briefly in Survival; keep campaign TIME adding barrier seconds
+- [x] 2.1 Implement continuous ball spawns with difficulty ramp (interval + size weighting) and concurrent-ball cap
+- [x] 2.2 Make TIME powerup pause spawns briefly in Survival; keep campaign TIME adding barrier seconds
 
 ## 3. HUD & end flow
 

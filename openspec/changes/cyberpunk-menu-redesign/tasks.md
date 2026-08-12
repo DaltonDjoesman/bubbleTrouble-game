@@ -6,10 +6,10 @@
 
 ## 2. Menu screens
 
-- [ ] 2.1 Restyle root menu (header brand, English labels, gold selection, footer hints)
-- [ ] 2.2 Restyle options screen with the same chrome and volume controls
-- [ ] 2.3 Restyle level-select chrome (tabs/cards/back) without changing Campaign/Survival flow or start-level behavior
-- [ ] 2.4 Restyle high-scores screen (tabs, table, back) with shared chrome
+- [x] 2.1 Restyle root menu (header brand, English labels, gold selection, footer hints)
+- [x] 2.2 Restyle options screen with the same chrome and volume controls
+- [x] 2.3 Restyle level-select chrome (tabs/cards/back) without changing Campaign/Survival flow or start-level behavior
+- [x] 2.4 Restyle high-scores screen (tabs, table, back) with shared chrome
 
 ## 3. Match HUD and overlays
 

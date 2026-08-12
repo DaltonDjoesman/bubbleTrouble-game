@@ -6,7 +6,15 @@ from typing import TYPE_CHECKING, Literal
 
 import pygame
 
-from consts import VOLUME_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
+from consts import (
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+    UI_FG,
+    UI_MUTED,
+    UI_NEON_CYAN,
+    UI_NEON_GOLD,
+    VOLUME_MAX,
+)
 from highscores import board_key_for_mode, format_time_ms, load_highscores
 from levels import (
     DEFAULT_LEVEL,
@@ -16,20 +24,23 @@ from levels import (
     get_level,
     list_levels,
 )
+from ui_chrome import (
+    CONTENT_TOP,
+    arrow_color,
+    draw_card,
+    draw_footer_band,
+    draw_header_brand,
+    draw_hint_row,
+    draw_scanlines,
+    draw_screen_bg,
+    draw_system_line,
+    get_small_font,
+    selection_color,
+)
 
 if TYPE_CHECKING:
     from audio import AudioManager
     from highscores import ScoreEntry
-
-_NEON_CYAN = (80, 240, 255)
-_HUD_DIM = (180, 200, 220)
-_TITLE = (230, 240, 255)
-_SELECTED = (255, 220, 80)
-_CARD_BG = (18, 12, 40, 210)
-_CARD_BORDER = (90, 70, 140)
-_CARD_BORDER_SEL = (255, 220, 80)
-_ARROW = (80, 240, 255)
-_HINT_DIM = (140, 160, 190)
 
 _CARD_W = 400
 _CARD_H = 48
@@ -103,18 +114,18 @@ class MainMenu:
             return [
                 ("music", f"Music   {music}/{VOLUME_MAX}"),
                 ("sfx", f"SFX     {sfx}/{VOLUME_MAX}"),
-                ("back", "Back"),
+                ("back", "BACK"),
             ]
         if self.screen == "levels":
-            return [("back", "Back")]
+            return [("back", "BACK")]
         if self.screen == "scores":
-            return [("back", "Back")]
+            return [("back", "BACK")]
         return [
-            ("play", "Play"),
-            ("mode", f"Mode    {self.mode}"),
-            ("scores", "High Scores"),
-            ("options", "Options"),
-            ("quit", "Quit"),
+            ("play", "PLAY GAME"),
+            ("mode", f"MODE    {self.mode}"),
+            ("scores", "HIGH SCORES"),
+            ("options", "OPTIONS"),
+            ("quit", "QUIT"),
         ]
 
     def _enter_options(self) -> None:
@@ -314,54 +325,47 @@ class MainMenu:
         pygame.draw.polygon(surf, color, points)
 
     def draw(self, screen: pygame.Surface) -> None:
+        draw_screen_bg(screen)
+        if self.screen == "root":
+            draw_header_brand(screen, subtitle="CYBER ARCADE")
+        elif self.screen == "options":
+            draw_header_brand(screen, subtitle="SYSTEM OPTIONS")
+        elif self.screen == "levels":
+            draw_header_brand(screen, subtitle="SELECT LEVEL")
+        else:
+            draw_header_brand(screen, subtitle="HIGH SCORES")
+
         if self.screen == "levels":
             self._draw_levels_screen(screen)
-            self._draw_hints(screen)
-            return
-        if self.screen == "scores":
+        elif self.screen == "scores":
             self._draw_scores_screen(screen)
-            self._draw_hints(screen)
-            return
+        else:
+            self._draw_list_screen(screen)
 
-        title = self.big_font.render("Bubble Trouble", True, _TITLE)
-        screen.blit(
-            title, title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 170))
-        )
+        self._draw_footer(screen)
+        draw_scanlines(screen)
 
-        if self.screen == "options":
-            subtitle = self.font.render("Options", True, _NEON_CYAN)
-            screen.blit(
-                subtitle,
-                subtitle.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 128)),
-            )
-
+    def _draw_list_screen(self, screen: pygame.Surface) -> None:
         items = self._items()
         total_h = len(items) * _CARD_H + (len(items) - 1) * _CARD_GAP
-        start_y = SCREEN_HEIGHT // 2 - total_h // 2 + (20 if self.screen == "options" else 12)
+        start_y = CONTENT_TOP + 36 + (SCREEN_HEIGHT - CONTENT_TOP - 72 - total_h) // 2
+        start_y = max(CONTENT_TOP + 40, min(start_y, SCREEN_HEIGHT - 72 - total_h - 20))
         cx = SCREEN_WIDTH // 2
 
         for i, (kind, label) in enumerate(items):
             selected = i == self.selected
             card_rect = pygame.Rect(0, 0, _CARD_W, _CARD_H)
             card_rect.center = (cx, start_y + i * (_CARD_H + _CARD_GAP) + _CARD_H // 2)
+            draw_card(screen, card_rect, selected=selected)
 
-            card = pygame.Surface((_CARD_W, _CARD_H), flags=pygame.SRCALPHA)
-            card.fill(_CARD_BG)
-            screen.blit(card, card_rect.topleft)
-            border = _CARD_BORDER_SEL if selected else _CARD_BORDER
-            pygame.draw.rect(screen, border, card_rect, width=2, border_radius=8)
-            if selected:
-                inner = card_rect.inflate(-6, -6)
-                pygame.draw.rect(screen, _NEON_CYAN, inner, width=1, border_radius=6)
-
-            text_color = _SELECTED if selected else _HUD_DIM
-            arrow_color = _ARROW if selected else _HUD_DIM
+            text_color = selection_color(selected)
+            a_color = arrow_color(selected)
 
             if kind in ("mode", "music", "sfx"):
                 if kind == "mode":
-                    name, value = "Mode", self.mode
+                    name, value = "MODE", self.mode
                 elif kind == "music":
-                    name = "Music"
+                    name = "MUSIC"
                     value = f"{self.audio.music_volume if self.audio else 0}/{VOLUME_MAX}"
                 else:
                     name = "SFX"
@@ -375,37 +379,33 @@ class MainMenu:
                 )
                 cluster_cx = card_rect.right - 88
                 cy = card_rect.centery
-                self._draw_arrow_left(screen, cluster_cx - 36, cy, 12, arrow_color)
+                self._draw_arrow_left(screen, cluster_cx - 36, cy, 12, a_color)
                 screen.blit(val_surf, val_surf.get_rect(center=(cluster_cx, cy)))
-                self._draw_arrow_right(screen, cluster_cx + 36, cy, 12, arrow_color)
+                self._draw_arrow_right(screen, cluster_cx + 36, cy, 12, a_color)
             else:
                 text = self.font.render(label, True, text_color)
                 screen.blit(text, text.get_rect(center=card_rect.center))
 
-        self._draw_hints(screen)
-
     def _draw_levels_screen(self, screen: pygame.Surface) -> None:
         """Campaign | Survival tabs; campaign uses a 2-column grid."""
-        header = self.big_font.render("Select Level", True, _TITLE)
-        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 48)))
-
-        tab_y = 92
-        tab_labels = ("Campaign", "Survival")
+        tab_y = CONTENT_TOP + 28
+        tab_labels = ("CAMPAIGN", "SURVIVAL")
         for i, key in enumerate(LEVEL_TABS):
             selected = key == self.level_tab
-            tab_rect = pygame.Rect(0, 0, 140, 34)
-            tab_rect.center = (SCREEN_WIDTH // 2 - 78 + i * 156, tab_y)
-            self._draw_card_chrome(screen, tab_rect, selected)
-            color = _SELECTED if selected else _HUD_DIM
+            tab_rect = pygame.Rect(0, 0, 148, 34)
+            tab_rect.center = (SCREEN_WIDTH // 2 - 82 + i * 164, tab_y)
+            draw_card(screen, tab_rect, selected=selected, radius=4)
+            color = selection_color(selected) if selected else UI_NEON_CYAN
+            if not selected:
+                color = UI_MUTED
             text = self.font.render(tab_labels[i], True, color)
             screen.blit(text, text.get_rect(center=tab_rect.center))
 
         cx = SCREEN_WIDTH // 2
         card_h = _LEVEL_CARD_H
-        blurb_y = 0
 
         if self.level_tab == "campaign":
-            grid_top = 138
+            grid_top = tab_y + 36
             col_step = _GRID_CARD_W + _GRID_COL_GAP
             left_x = cx - col_step // 2
             right_x = cx + col_step // 2
@@ -422,40 +422,38 @@ class MainMenu:
             back_y = grid_top + 3 * row_step + 4
             back_rect = pygame.Rect(0, 0, _CARD_W, card_h)
             back_rect.center = (cx, back_y + card_h // 2)
-            self._draw_card_chrome(screen, back_rect, self.selected >= len(self._campaign_levels()))
-            back_color = _SELECTED if self.selected >= len(self._campaign_levels()) else _HUD_DIM
-            back_surf = self.font.render("Back", True, back_color)
+            back_sel = self.selected >= len(self._campaign_levels())
+            draw_card(screen, back_rect, selected=back_sel)
+            back_surf = self.font.render("BACK", True, selection_color(back_sel))
             screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
-            blurb_y = back_rect.bottom + 22
 
             if self.selected < len(self._campaign_levels()):
                 blurb_lvl = self._campaign_levels()[self.selected]
-                blurb = self.font.render(blurb_lvl.blurb, True, _NEON_CYAN)
-                screen.blit(blurb, blurb.get_rect(center=(cx, blurb_y)))
+                blurb = get_small_font().render(blurb_lvl.blurb, True, UI_NEON_CYAN)
+                screen.blit(blurb, blurb.get_rect(center=(cx, back_rect.bottom + 20)))
         else:
             surv = self._survival_level()
             card_rect = pygame.Rect(0, 0, _CARD_W, card_h + 8)
-            card_rect.center = (cx, 168)
+            card_rect.center = (cx, tab_y + 70)
             self._draw_level_card(screen, card_rect, surv, self.selected == 0, badge="S")
 
             board_key = board_key_for_mode(self.mode)
             board = self._score_boards.get(board_key, [])
             if board:
                 best = self.font.render(
-                    f"Best ({self.mode}): {format_time_ms(board[0].time_ms)}",
+                    f"BEST ({self.mode}): {format_time_ms(board[0].time_ms)}",
                     True,
-                    _SELECTED,
+                    UI_NEON_GOLD,
                 )
-                screen.blit(best, best.get_rect(center=(cx, card_rect.bottom + 28)))
+                screen.blit(best, best.get_rect(center=(cx, card_rect.bottom + 26)))
 
-            blurb = self.font.render(surv.blurb, True, _NEON_CYAN)
-            screen.blit(blurb, blurb.get_rect(center=(cx, card_rect.bottom + 58)))
+            blurb = get_small_font().render(surv.blurb, True, UI_NEON_CYAN)
+            screen.blit(blurb, blurb.get_rect(center=(cx, card_rect.bottom + 52)))
 
             back_rect = pygame.Rect(0, 0, _CARD_W, card_h)
-            back_rect.center = (cx, card_rect.bottom + 108)
-            self._draw_card_chrome(screen, back_rect, self.selected == 1)
-            back_color = _SELECTED if self.selected == 1 else _HUD_DIM
-            back_surf = self.font.render("Back", True, back_color)
+            back_rect.center = (cx, card_rect.bottom + 100)
+            draw_card(screen, back_rect, selected=self.selected == 1)
+            back_surf = self.font.render("BACK", True, selection_color(self.selected == 1))
             screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
 
     def _draw_level_card(
@@ -467,8 +465,8 @@ class MainMenu:
         *,
         badge: str | None = None,
     ) -> None:
-        self._draw_card_chrome(screen, card_rect, selected)
-        text_color = _SELECTED if selected else _HUD_DIM
+        draw_card(screen, card_rect, selected=selected)
+        text_color = selection_color(selected)
         badge_text = badge if badge is not None else str(lvl.id)
         badge_w = 26 if len(badge_text) > 1 else 28
         badge_rect = pygame.Rect(
@@ -477,12 +475,8 @@ class MainMenu:
             badge_w,
             24,
         )
-        pygame.draw.rect(
-            screen,
-            lvl.theme.barrier_edge if selected else _CARD_BORDER,
-            badge_rect,
-            border_radius=6,
-        )
+        badge_fill = UI_NEON_GOLD if selected else UI_NEON_CYAN
+        pygame.draw.rect(screen, badge_fill, badge_rect, border_radius=4)
         id_surf = self.font.render(badge_text, True, (12, 8, 24))
         screen.blit(id_surf, id_surf.get_rect(center=badge_rect.center))
         name_surf = self.font.render(lvl.name, True, text_color)
@@ -498,25 +492,22 @@ class MainMenu:
         )
 
     def _draw_scores_screen(self, screen: pygame.Surface) -> None:
-        header = self.big_font.render("High Scores", True, _TITLE)
-        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 56)))
-
-        tab_y = 110
+        tab_y = CONTENT_TOP + 28
         for i, key in enumerate(SCORE_TABS):
             label = "1P" if key == "1p" else "2P"
             selected = key == self.score_tab
-            tab_rect = pygame.Rect(0, 0, 120, 36)
+            tab_rect = pygame.Rect(0, 0, 120, 34)
             tab_rect.center = (SCREEN_WIDTH // 2 - 70 + i * 140, tab_y)
-            self._draw_card_chrome(screen, tab_rect, selected)
-            color = _SELECTED if selected else _HUD_DIM
+            draw_card(screen, tab_rect, selected=selected, radius=4)
+            color = selection_color(selected)
             text = self.font.render(label, True, color)
             screen.blit(text, text.get_rect(center=tab_rect.center))
 
         board = self._score_boards.get(self.score_tab, [])
-        list_top = 170
+        list_top = tab_y + 44
         cx = SCREEN_WIDTH // 2
         if not board:
-            empty = self.font.render("No scores yet — survive longer!", True, _HINT_DIM)
+            empty = self.font.render("No scores yet — survive longer!", True, UI_MUTED)
             screen.blit(empty, empty.get_rect(center=(cx, list_top + 40)))
         else:
             for i, entry in enumerate(board):
@@ -525,164 +516,60 @@ class MainMenu:
                     cx,
                     list_top + i * (_LEVEL_CARD_H + _LEVEL_CARD_GAP) + _LEVEL_CARD_H // 2,
                 )
-                self._draw_card_chrome(screen, row, False)
-                rank = self.font.render(f"{i + 1}.", True, _NEON_CYAN)
-                name = self.font.render(entry.name, True, _TITLE)
-                time_s = self.font.render(format_time_ms(entry.time_ms), True, _SELECTED)
+                draw_card(screen, row, selected=False)
+                rank = self.font.render(f"{i + 1}.", True, UI_NEON_CYAN)
+                name = self.font.render(entry.name, True, UI_FG)
+                time_s = self.font.render(format_time_ms(entry.time_ms), True, UI_NEON_GOLD)
                 screen.blit(rank, rank.get_rect(midleft=(row.left + 24, row.centery)))
                 screen.blit(name, name.get_rect(midleft=(row.left + 70, row.centery)))
                 screen.blit(time_s, time_s.get_rect(midright=(row.right - 24, row.centery)))
 
-        back_y = list_top + 5 * (_LEVEL_CARD_H + _LEVEL_CARD_GAP) + 24
+        back_y = list_top + 5 * (_LEVEL_CARD_H + _LEVEL_CARD_GAP) + 16
         back_rect = pygame.Rect(0, 0, _CARD_W, _LEVEL_CARD_H)
         back_rect.center = (cx, back_y + _LEVEL_CARD_H // 2)
-        self._draw_card_chrome(screen, back_rect, True)
-        back_surf = self.font.render("Back", True, _SELECTED)
+        draw_card(screen, back_rect, selected=True)
+        back_surf = self.font.render("BACK", True, UI_NEON_GOLD)
         screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
 
-    @staticmethod
-    def _draw_card_chrome(
-        screen: pygame.Surface, card_rect: pygame.Rect, selected: bool
-    ) -> None:
-        card = pygame.Surface(card_rect.size, flags=pygame.SRCALPHA)
-        card.fill(_CARD_BG)
-        screen.blit(card, card_rect.topleft)
-        border = _CARD_BORDER_SEL if selected else _CARD_BORDER
-        pygame.draw.rect(screen, border, card_rect, width=2, border_radius=8)
-        if selected:
-            inner = card_rect.inflate(-6, -6)
-            pygame.draw.rect(screen, _NEON_CYAN, inner, width=1, border_radius=6)
-
-    def _draw_hints(self, screen: pygame.Surface) -> None:
-        """Footer: control legend; Esc on submenus; co-op keys on root."""
+    def _draw_footer(self, screen: pygame.Surface) -> None:
+        draw_footer_band(screen)
         if self.screen == "root":
             self._draw_play_controls(screen)
-
-        y = SCREEN_HEIGHT - 40
-        parts: list[tuple[str, str | None]] = [
-            ("nav", None),
-            ("text", "move"),
-            ("sep", None),
-        ]
-        if self.screen in ("root", "options"):
-            parts.extend(
-                [
-                    ("vol", None),
-                    ("text", "adjust"),
-                    ("sep", None),
-                ]
-            )
-        if self.screen == "scores":
-            parts.extend(
-                [
-                    ("vol", None),
-                    ("text", "tabs"),
-                    ("sep", None),
-                ]
-            )
-        if self.screen == "levels":
-            parts.extend(
-                [
-                    ("text", "Tab"),
-                    ("text_dim", "mode"),
-                    ("sep", None),
-                ]
-            )
-        parts.extend(
-            [
-                ("text", "Enter"),
-                ("text_dim", "confirm"),
+            hints: list[tuple[list[str], str]] = [
+                (["W", "S"], "Navigate"),
+                (["A", "D"], "Adjust"),
+                (["ENTER"], "Confirm"),
             ]
-        )
-        if self.screen in ("options", "levels", "scores"):
-            parts.extend(
-                [
-                    ("sep", None),
-                    ("text", "Esc"),
-                    ("text_dim", "back"),
-                ]
-            )
-
-        gap = 8
-        widths: list[int] = []
-        for kind, payload in parts:
-            if kind in ("nav", "vol"):
-                widths.append(28)
-            elif kind == "sep":
-                widths.append(10)
-            else:
-                widths.append(self.font.size(payload or "")[0])
-        total_w = sum(widths) + gap * (len(parts) - 1)
-        x = (SCREEN_WIDTH - total_w) // 2
-
-        for (kind, payload), w in zip(parts, widths):
-            if kind == "nav":
-                self._draw_arrow_up(screen, x + 6, y, 10, _NEON_CYAN)
-                self._draw_arrow_down(screen, x + 20, y, 10, _NEON_CYAN)
-            elif kind == "vol":
-                self._draw_arrow_left(screen, x + 6, y, 10, _NEON_CYAN)
-                self._draw_arrow_right(screen, x + 20, y, 10, _NEON_CYAN)
-            elif kind == "sep":
-                dot = self.font.render("·", True, _HINT_DIM)
-                screen.blit(dot, dot.get_rect(center=(x + w // 2, y)))
-            elif kind == "text":
-                surf = self.font.render(payload or "", True, _NEON_CYAN)
-                screen.blit(surf, surf.get_rect(midleft=(x, y)))
-            elif kind == "text_dim":
-                surf = self.font.render(payload or "", True, _HINT_DIM)
-                screen.blit(surf, surf.get_rect(midleft=(x, y)))
-            x += w + gap
+        elif self.screen == "options":
+            hints = [
+                (["W", "S"], "Navigate"),
+                (["A", "D"], "Adjust"),
+                (["ENTER"], "Confirm"),
+                (["ESC"], "Back"),
+            ]
+        elif self.screen == "levels":
+            hints = [
+                (["W", "S"], "Navigate"),
+                (["TAB"], "Mode"),
+                (["ENTER"], "Confirm"),
+                (["ESC"], "Back"),
+            ]
+        else:
+            hints = [
+                (["A", "D"], "Tabs"),
+                (["ENTER"], "Confirm"),
+                (["ESC"], "Back"),
+            ]
+        hint_y = SCREEN_HEIGHT - 40
+        draw_hint_row(screen, hints, center_y=hint_y, font=get_small_font())
+        draw_system_line(screen)
 
     def _draw_play_controls(self, screen: pygame.Surface) -> None:
-        """Gameplay key legend above the nav footer (drawn arrows, not Unicode)."""
-        y = SCREEN_HEIGHT - 68
+        """Gameplay key legend above the nav footer."""
+        y = SCREEN_HEIGHT - 58
+        small = get_small_font()
         if self.mode == "2P":
-            p1 = self.font.render("P1  A/D + Space", True, _HINT_DIM)
-            sep = self.font.render("·", True, _HINT_DIM)
-            p2_pre = self.font.render("P2", True, _HINT_DIM)
-            p2_post = self.font.render("+ Enter", True, _HINT_DIM)
-            arrow_cluster = 28
-            gap = 10
-            total = (
-                p1.get_width()
-                + gap
-                + sep.get_width()
-                + gap
-                + p2_pre.get_width()
-                + 8
-                + arrow_cluster
-                + 8
-                + p2_post.get_width()
-            )
-            x = (SCREEN_WIDTH - total) // 2
-            screen.blit(p1, p1.get_rect(midleft=(x, y)))
-            x += p1.get_width() + gap
-            screen.blit(sep, sep.get_rect(center=(x + sep.get_width() // 2, y)))
-            x += sep.get_width() + gap
-            screen.blit(p2_pre, p2_pre.get_rect(midleft=(x, y)))
-            x += p2_pre.get_width() + 8
-            self._draw_arrow_left(screen, x + 6, y, 10, _NEON_CYAN)
-            self._draw_arrow_right(screen, x + 20, y, 10, _NEON_CYAN)
-            x += arrow_cluster + 8
-            screen.blit(p2_post, p2_post.get_rect(midleft=(x, y)))
+            line = small.render("P1  A/D + SPACE   ·   P2  ←/→ + ENTER", True, UI_MUTED)
         else:
-            line = self.font.render("A/D move  ·  Space fire", True, _HINT_DIM)
-            screen.blit(line, line.get_rect(center=(SCREEN_WIDTH // 2, y)))
-
-    @staticmethod
-    def _draw_arrow_up(surf: pygame.Surface, cx: int, cy: int, size: int, color: tuple) -> None:
-        points = [
-            (cx, cy - size // 2),
-            (cx - size // 2, cy + size // 2),
-            (cx + size // 2, cy + size // 2),
-        ]
-        pygame.draw.polygon(surf, color, points)
-
-    @staticmethod
-    def _draw_arrow_down(surf: pygame.Surface, cx: int, cy: int, size: int, color: tuple) -> None:
-        points = [
-            (cx - size // 2, cy - size // 2),
-            (cx + size // 2, cy - size // 2),
-            (cx, cy + size // 2),
-        ]
-        pygame.draw.polygon(surf, color, points)
+            line = small.render("A/D move  ·  SPACE fire", True, UI_MUTED)
+        screen.blit(line, line.get_rect(center=(SCREEN_WIDTH // 2, y)))

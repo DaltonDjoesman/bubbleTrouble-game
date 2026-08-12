@@ -63,6 +63,7 @@ from consts import (
 )
 from levels import (
     DEFAULT_LEVEL,
+    MAX_CAMPAIGN_LEVEL,
     MAX_LEVEL,
     DoorRuntime,
     Level,
@@ -121,6 +122,8 @@ class Game:
         self.state = "menu"
         self.time_max = float(self.current_level.time_seconds)
         self.time_remaining = self.time_max
+        self.survival_elapsed_ms = 0
+        self._survival_tick_ms = 0
         self._fire_cooldown_until: dict[int, int] = {}
         self._end_sfx_played = False
         self._notice: str | None = None
@@ -140,9 +143,34 @@ class Game:
         self._notice = text
         self._notice_until = pygame.time.get_ticks() + duration_ms
 
+    def _is_survival(self) -> bool:
+        return bool(getattr(self.current_level, "survival", False))
+
     def _refill_time(self) -> None:
         self.time_max = float(self.current_level.time_seconds)
         self.time_remaining = self.time_max
+
+    def _reset_survival_clock(self) -> None:
+        self.survival_elapsed_ms = 0
+        self._survival_tick_ms = pygame.time.get_ticks()
+
+    def _tick_survival_clock(self) -> None:
+        """Advance shared Survival chronometer while playing."""
+        if not self._is_survival() or self.state != "playing":
+            return
+        now = pygame.time.get_ticks()
+        if self._survival_tick_ms <= 0:
+            self._survival_tick_ms = now
+            return
+        self.survival_elapsed_ms += max(0, now - self._survival_tick_ms)
+        self._survival_tick_ms = now
+
+    def _finalize_survival_time(self) -> None:
+        """Lock elapsed Survival time at game over (shared 1P/2P chronometer)."""
+        if not self._is_survival():
+            return
+        self._tick_survival_clock()
+        self._survival_tick_ms = 0
 
     def add_time(self, seconds: float) -> None:
         """TIME powerup: add seconds, clamped to this level's budget."""
@@ -207,6 +235,7 @@ class Game:
             door.reset(now)
         self._solids = collect_solids(self.current_level, self._doors)
         self._refill_time()
+        self._reset_survival_clock()
         self._spawn_players()
         if self.selected_mode == "2P":
             self._show_notice("P1 A/D Space · P2 arrows Enter", 2800)
@@ -223,7 +252,8 @@ class Game:
 
     def _advance_to_next_level(self) -> None:
         next_id = self.selected_level + 1
-        if next_id > MAX_LEVEL:
+        # Campaign win/advance stops at the last clearable arena (not Survival).
+        if next_id > MAX_CAMPAIGN_LEVEL:
             self.state = "won"
             return
         self.selected_level = next_id
@@ -383,6 +413,7 @@ class Game:
         player.kill()
         self.audio.play_sfx("player_hit")
         if self.selected_mode == "1P" or not self._living_players():
+            self._finalize_survival_time()
             self.state = "game_over"
         else:
             self._show_notice(f"P{player.player_id} down", 1800)
@@ -393,7 +424,7 @@ class Game:
                 self._remove_player_from_level(player)
 
     def _drain_time(self) -> None:
-        if self.state != "playing":
+        if self.state != "playing" or self._is_survival():
             return
         self.time_remaining -= TIME_DRAIN_PER_SEC / FPS
         if self.time_remaining <= 0:
@@ -403,7 +434,10 @@ class Game:
     def _check_win(self) -> None:
         if self.state != "playing" or len(self.balls) != 0:
             return
-        if self.selected_level < MAX_LEVEL:
+        # Survival never wins by clearing balls — keep playing for spawns.
+        if self._is_survival():
+            return
+        if self.selected_level < MAX_CAMPAIGN_LEVEL:
             self.state = "level_clear"
             self._level_clear_at = pygame.time.get_ticks()
             self._end_sfx_played = False
@@ -596,6 +630,7 @@ class Game:
                 draw_arena_geometry(self.screen, self.current_level, self._doors)
 
                 if self.state == "playing":
+                    self._tick_survival_clock()
                     self._drain_time()
                     for door in self._doors:
                         door.update(now, self.balls)

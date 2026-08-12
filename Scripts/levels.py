@@ -17,7 +17,11 @@ from consts import (
 )
 
 DEFAULT_LEVEL = 1
-MAX_LEVEL = 5
+# Campaign arenas that can be cleared / auto-advanced (Survival is separate).
+MAX_CAMPAIGN_LEVEL = 5
+# Last selectable entry (includes Survival).
+MAX_LEVEL = 6
+SURVIVAL_LEVEL_ID = 6
 
 
 @dataclass(frozen=True)
@@ -125,6 +129,7 @@ class Level:
     theme: LevelTheme
     time_seconds: int = 60
     player_x: int = SCREEN_WIDTH // 2
+    survival: bool = False
 
     def barrier_rects(self) -> list[pygame.Rect]:
         return [b.as_rect() for b in self.barriers]
@@ -151,6 +156,7 @@ def _level(
     doors: list[DoorDef] | None = None,
     time_seconds: int = 60,
     player_x: int | None = None,
+    survival: bool = False,
 ) -> Level:
     return Level(
         id=level_id,
@@ -162,6 +168,7 @@ def _level(
         doors=tuple(doors or ()),
         time_seconds=max(1, int(time_seconds)),
         player_x=SCREEN_WIDTH // 2 if player_x is None else player_x,
+        survival=survival,
     )
 
 
@@ -221,6 +228,17 @@ _THEME_MIX = LevelTheme(
     door_open_edge=(255, 200, 80),
     floor_a=(255, 90, 200),
     floor_b=(255, 200, 80),
+)
+_THEME_SURVIVAL = LevelTheme(
+    bg_top=(22, 4, 18),
+    bg_bottom=(56, 8, 28),
+    barrier_fill=(90, 30, 50),
+    barrier_edge=(255, 80, 120),
+    door_fill=(100, 20, 50),
+    door_edge=(255, 100, 140),
+    door_open_edge=(255, 200, 100),
+    floor_a=(255, 80, 120),
+    floor_b=(255, 160, 80),
 )
 
 
@@ -359,18 +377,39 @@ _LEVELS: dict[int, Level] = {
         time_seconds=100,
         player_x=SCREEN_WIDTH // 2,
     ),
+    # L6 — Endless Survival (no drain, no clear-all win)
+    6: _level(
+        SURVIVAL_LEVEL_ID,
+        "Survival",
+        "Endless · chronometer · best time wins",
+        _THEME_SURVIVAL,
+        balls=[
+            BallSpawn("S", 280, 140, (2.0, 0.0)),
+            BallSpawn("S", 520, 120, (-2.0, 0.0)),
+        ],
+        time_seconds=1,
+        player_x=SCREEN_WIDTH // 2,
+        survival=True,
+    ),
 }
 
 
 def get_level(level_id: int) -> Level:
-    """Return a level by id, clamping to the authored pack."""
+    """Return a level by id, clamping to the authored pack (campaign + Survival)."""
     clamped = max(DEFAULT_LEVEL, min(int(level_id), MAX_LEVEL))
     return _LEVELS[clamped]
 
 
 def list_levels() -> list[Level]:
-    """All levels in id order (for menu / tooling)."""
+    """All selectable levels in id order (campaign then Survival)."""
     return [_LEVELS[i] for i in range(DEFAULT_LEVEL, MAX_LEVEL + 1)]
+
+
+def is_survival_level(level: Level | int) -> bool:
+    """True when the level (or id) is Survival mode."""
+    if isinstance(level, Level):
+        return level.survival
+    return get_level(level).survival
 
 
 def collect_solids(

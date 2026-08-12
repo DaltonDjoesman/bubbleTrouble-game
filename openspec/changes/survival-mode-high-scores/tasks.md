@@ -16,6 +16,6 @@
 
 ## 4. High scores persistence & menu
 
-- [ ] 4.1 Persist top 5 entries per `1p` / `2p` board in a local JSON file (load/save, corrupt-safe empty fallback)
-- [ ] 4.2 Add High Scores menu view with 1P/2P tab switching listing rank, name, and time
-- [ ] 4.3 Smoke-test: campaign 1–5 unchanged; Survival spawn/ramp/chronometer; 1P and 2P boards; initials; relaunch persistence
+- [x] 4.1 Persist top 5 entries per `1p` / `2p` board in a local JSON file (load/save, corrupt-safe empty fallback)
+- [x] 4.2 Add High Scores menu view with 1P/2P tab switching listing rank, name, and time
+- [x] 4.3 Smoke-test: campaign 1–5 unchanged; Survival spawn/ramp/chronometer; 1P and 2P boards; initials; relaunch persistence

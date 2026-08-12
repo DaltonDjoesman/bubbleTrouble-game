@@ -1,4 +1,4 @@
-"""Main menu: Play → level select; Mode/Options/Quit on root."""
+"""Main menu: Play → level select; Mode/High Scores/Options/Quit on root."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,10 +7,12 @@ from typing import TYPE_CHECKING, Literal
 import pygame
 
 from consts import VOLUME_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
+from highscores import format_time_ms, load_highscores
 from levels import DEFAULT_LEVEL, MAX_LEVEL, get_level, list_levels
 
 if TYPE_CHECKING:
     from audio import AudioManager
+    from highscores import ScoreEntry
 
 _NEON_CYAN = (80, 240, 255)
 _HUD_DIM = (180, 200, 220)
@@ -25,10 +27,13 @@ _HINT_DIM = (140, 160, 190)
 _CARD_W = 400
 _CARD_H = 48
 _CARD_GAP = 10
+_LEVEL_CARD_H = 42
+_LEVEL_CARD_GAP = 6
 
 MODES = ("1P", "2P")
+SCORE_TABS = ("1p", "2p")
 
-Screen = Literal["root", "options", "levels"]
+Screen = Literal["root", "options", "levels", "scores"]
 
 
 @dataclass
@@ -40,7 +45,7 @@ class MenuAction:
 
 
 class MainMenu:
-    """Root: Play / Mode / Options / Quit. Play opens level select."""
+    """Root: Play / Mode / High Scores / Options / Quit. Play opens level select."""
 
     def __init__(
         self,
@@ -61,6 +66,8 @@ class MainMenu:
         self.mode = mode if mode in MODES else "1P"
         self.max_level = max(1, max_level)
         self.level = max(1, min(level, self.max_level))
+        self.score_tab = "1p"
+        self._score_boards: dict[str, list[ScoreEntry]] = load_highscores()
 
     def _items(self) -> list[tuple[str, str]]:
         if self.screen == "options":
@@ -78,9 +85,12 @@ class MainMenu:
             ]
             items.append(("back", "Back"))
             return items
+        if self.screen == "scores":
+            return [("back", "Back")]
         return [
             ("play", "Play"),
             ("mode", f"Mode    {self.mode}"),
+            ("scores", "High Scores"),
             ("options", "Options"),
             ("quit", "Quit"),
         ]
@@ -98,6 +108,14 @@ class MainMenu:
         self.selected = max(0, min(self.level - 1, self.max_level - 1))
         self._sfx("ui_confirm")
 
+    def _enter_scores(self) -> None:
+        self._root_selected = self.selected
+        self.screen = "scores"
+        self.selected = 0
+        self.score_tab = "1p" if self.mode == "1P" else "2p"
+        self._score_boards = load_highscores()
+        self._sfx("ui_confirm")
+
     def _leave_submenu(self) -> None:
         self.screen = "root"
         self.selected = self._root_selected
@@ -109,7 +127,18 @@ class MainMenu:
         action = MenuAction()
 
         if key == pygame.K_ESCAPE:
-            if self.screen in ("options", "levels"):
+            if self.screen in ("options", "levels", "scores"):
+                self._leave_submenu()
+            return action
+
+        if self.screen == "scores":
+            if key in (pygame.K_LEFT, pygame.K_a, pygame.K_TAB):
+                self._switch_score_tab(-1 if key != pygame.K_TAB else +1)
+                return action
+            if key in (pygame.K_RIGHT, pygame.K_d):
+                self._switch_score_tab(+1)
+                return action
+            if key in (pygame.K_RETURN, pygame.K_SPACE):
                 self._leave_submenu()
             return action
 
@@ -132,6 +161,8 @@ class MainMenu:
                 action.quit_app = True
             elif kind == "options":
                 self._enter_options()
+            elif kind == "scores":
+                self._enter_scores()
             elif kind == "back":
                 self._leave_submenu()
             elif kind.startswith("level:"):
@@ -141,6 +172,11 @@ class MainMenu:
             elif kind in ("mode", "music", "sfx"):
                 self._nudge_field(+1)
         return action
+
+    def _switch_score_tab(self, delta: int) -> None:
+        idx = SCORE_TABS.index(self.score_tab)
+        self.score_tab = SCORE_TABS[(idx + delta) % len(SCORE_TABS)]
+        self._sfx("ui_select")
 
     def _nudge_field(self, delta: int) -> None:
         kind = self._items()[self.selected][0]
@@ -190,6 +226,10 @@ class MainMenu:
     def draw(self, screen: pygame.Surface) -> None:
         if self.screen == "levels":
             self._draw_levels_screen(screen)
+            self._draw_hints(screen)
+            return
+        if self.screen == "scores":
+            self._draw_scores_screen(screen)
             self._draw_hints(screen)
             return
 
@@ -257,32 +297,32 @@ class MainMenu:
     def _draw_levels_screen(self, screen: pygame.Surface) -> None:
         """Dedicated level picker: header, spaced list, blurb for selection."""
         header = self.big_font.render("Select Level", True, _TITLE)
-        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 72)))
+        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 56)))
 
         items = self._items()
         level_items = [it for it in items if it[0].startswith("level:")]
         back_item = next(it for it in items if it[0] == "back")
 
-        list_top = 130
+        list_top = 100
         cx = SCREEN_WIDTH // 2
-        # Leave room under header; keep Back + blurb above footer
+        card_h, card_gap = _LEVEL_CARD_H, _LEVEL_CARD_GAP
         for i, (kind, _label) in enumerate(level_items):
             selected = i == self.selected
-            card_rect = pygame.Rect(0, 0, _CARD_W, _CARD_H)
-            card_rect.center = (cx, list_top + i * (_CARD_H + _CARD_GAP) + _CARD_H // 2)
+            card_rect = pygame.Rect(0, 0, _CARD_W, card_h)
+            card_rect.center = (cx, list_top + i * (card_h + card_gap) + card_h // 2)
             self._draw_card_chrome(screen, card_rect, selected)
 
             lvl = get_level(int(kind.split(":", 1)[1]))
             text_color = _SELECTED if selected else _HUD_DIM
-            # Number badge
-            badge = pygame.Rect(card_rect.left + 14, card_rect.centery - 14, 28, 28)
+            badge = pygame.Rect(card_rect.left + 14, card_rect.centery - 12, 28, 24)
             pygame.draw.rect(
                 screen,
                 lvl.theme.barrier_edge if selected else _CARD_BORDER,
                 badge,
                 border_radius=6,
             )
-            id_surf = self.font.render(str(lvl.id), True, (12, 8, 24))
+            badge_text = "S" if lvl.survival else str(lvl.id)
+            id_surf = self.font.render(badge_text, True, (12, 8, 24))
             screen.blit(id_surf, id_surf.get_rect(center=badge.center))
             name_surf = self.font.render(lvl.name, True, text_color)
             screen.blit(
@@ -292,22 +332,64 @@ class MainMenu:
 
         back_index = len(level_items)
         back_selected = self.selected == back_index
-        back_y = list_top + len(level_items) * (_CARD_H + _CARD_GAP) + 16
-        back_rect = pygame.Rect(0, 0, _CARD_W, _CARD_H)
-        back_rect.center = (cx, back_y + _CARD_H // 2)
+        back_y = list_top + len(level_items) * (card_h + card_gap) + 12
+        back_rect = pygame.Rect(0, 0, _CARD_W, card_h)
+        back_rect.center = (cx, back_y + card_h // 2)
         self._draw_card_chrome(screen, back_rect, back_selected)
         back_color = _SELECTED if back_selected else _HUD_DIM
         back_surf = self.font.render(back_item[1], True, back_color)
         screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
 
-        # Blurb for highlighted level (not Back)
         if self.selected < len(level_items):
-            lvl = get_level(self.selected + 1)
+            lvl = get_level(int(level_items[self.selected][0].split(":", 1)[1]))
             blurb = self.font.render(lvl.blurb, True, _NEON_CYAN)
             screen.blit(
                 blurb,
-                blurb.get_rect(center=(SCREEN_WIDTH // 2, back_rect.bottom + 36)),
+                blurb.get_rect(center=(SCREEN_WIDTH // 2, back_rect.bottom + 28)),
             )
+
+    def _draw_scores_screen(self, screen: pygame.Surface) -> None:
+        header = self.big_font.render("High Scores", True, _TITLE)
+        screen.blit(header, header.get_rect(center=(SCREEN_WIDTH // 2, 56)))
+
+        tab_y = 110
+        for i, key in enumerate(SCORE_TABS):
+            label = "1P" if key == "1p" else "2P"
+            selected = key == self.score_tab
+            tab_rect = pygame.Rect(0, 0, 120, 36)
+            tab_rect.center = (SCREEN_WIDTH // 2 - 70 + i * 140, tab_y)
+            self._draw_card_chrome(screen, tab_rect, selected)
+            color = _SELECTED if selected else _HUD_DIM
+            text = self.font.render(label, True, color)
+            screen.blit(text, text.get_rect(center=tab_rect.center))
+
+        board = self._score_boards.get(self.score_tab, [])
+        list_top = 170
+        cx = SCREEN_WIDTH // 2
+        if not board:
+            empty = self.font.render("No scores yet — survive longer!", True, _HINT_DIM)
+            screen.blit(empty, empty.get_rect(center=(cx, list_top + 40)))
+        else:
+            for i, entry in enumerate(board):
+                row = pygame.Rect(0, 0, _CARD_W, _LEVEL_CARD_H)
+                row.center = (
+                    cx,
+                    list_top + i * (_LEVEL_CARD_H + _LEVEL_CARD_GAP) + _LEVEL_CARD_H // 2,
+                )
+                self._draw_card_chrome(screen, row, False)
+                rank = self.font.render(f"{i + 1}.", True, _NEON_CYAN)
+                name = self.font.render(entry.name, True, _TITLE)
+                time_s = self.font.render(format_time_ms(entry.time_ms), True, _SELECTED)
+                screen.blit(rank, rank.get_rect(midleft=(row.left + 24, row.centery)))
+                screen.blit(name, name.get_rect(midleft=(row.left + 70, row.centery)))
+                screen.blit(time_s, time_s.get_rect(midright=(row.right - 24, row.centery)))
+
+        back_y = list_top + 5 * (_LEVEL_CARD_H + _LEVEL_CARD_GAP) + 24
+        back_rect = pygame.Rect(0, 0, _CARD_W, _LEVEL_CARD_H)
+        back_rect.center = (cx, back_y + _LEVEL_CARD_H // 2)
+        self._draw_card_chrome(screen, back_rect, True)
+        back_surf = self.font.render("Back", True, _SELECTED)
+        screen.blit(back_surf, back_surf.get_rect(center=back_rect.center))
 
     @staticmethod
     def _draw_card_chrome(
@@ -321,7 +403,6 @@ class MainMenu:
         if selected:
             inner = card_rect.inflate(-6, -6)
             pygame.draw.rect(screen, _NEON_CYAN, inner, width=1, border_radius=6)
-
 
     def _draw_hints(self, screen: pygame.Surface) -> None:
         """Footer: control legend; Esc on submenus; co-op keys on root."""
@@ -342,13 +423,21 @@ class MainMenu:
                     ("sep", None),
                 ]
             )
+        if self.screen == "scores":
+            parts.extend(
+                [
+                    ("vol", None),
+                    ("text", "tabs"),
+                    ("sep", None),
+                ]
+            )
         parts.extend(
             [
                 ("text", "Enter"),
                 ("text_dim", "confirm"),
             ]
         )
-        if self.screen in ("options", "levels"):
+        if self.screen in ("options", "levels", "scores"):
             parts.extend(
                 [
                     ("sep", None),
@@ -391,7 +480,6 @@ class MainMenu:
         """Gameplay key legend above the nav footer (drawn arrows, not Unicode)."""
         y = SCREEN_HEIGHT - 68
         if self.mode == "2P":
-            # Measure: "P1  A/D + Space   ·   P2  <> + Enter"
             p1 = self.font.render("P1  A/D + Space", True, _HINT_DIM)
             sep = self.font.render("·", True, _HINT_DIM)
             p2_pre = self.font.render("P2", True, _HINT_DIM)

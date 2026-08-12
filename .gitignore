@@ -12,12 +12,14 @@ env/
 .env
 .env.*
 
-# Local player settings (volumes, etc.)
+# Local player settings / high scores
 settings.json
+highscores.json
 
 # OS / editors
 .DS_Store
 Thumbs.db
+__MACOSX/
 .idea/
 .vscode/
 *.swp

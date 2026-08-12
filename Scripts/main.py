@@ -771,6 +771,7 @@ class Game:
         self.players.empty()
         self._end_sfx_played = False
         self._notice = None
+        self.highscores = load_highscores()
         self.menu.mode = self.selected_mode
         self.menu.level = self.selected_level
         self.menu.screen = "root"

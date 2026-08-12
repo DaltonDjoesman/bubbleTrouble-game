@@ -18,6 +18,6 @@
 
 ## 4. Polish and verify
 
-- [ ] 4.1 Visual pass against `designPrototype` tokens (glow/scanlines subtlety, spacing at 800×600)
-- [ ] 4.2 Manual smoke: root → options → levels → play level unchanged → end overlay → menu; scores path; 1P/2P mode toggle
+- [x] 4.1 Visual pass against `designPrototype` tokens (glow/scanlines subtlety, spacing at 800×600)
+- [x] 4.2 Manual smoke: root → options → levels → play level unchanged → end overlay → menu; scores path; 1P/2P mode toggle
 - [ ] 4.3 Optional stretch: brief skippable boot splash if foundation work finishes early

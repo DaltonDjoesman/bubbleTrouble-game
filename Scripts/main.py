@@ -38,10 +38,7 @@ from consts import (
     P2_RUN_FRAMES,
     P2_SPAWN_X_OFFSET,
     P2_GUN_SPRITE,
-    PANEL_BRICK_A,
-    PANEL_BRICK_B,
     PANEL_FRAME,
-    PANEL_FRAME_INNER,
     PLAY_BOTTOM,
     PLAY_LEFT,
     PLAY_RIGHT,
@@ -72,6 +69,17 @@ from consts import (
     TIME_POWER_SECONDS,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
+    UI_MUTED,
+    UI_NEON_CYAN,
+    UI_NEON_GOLD,
+    UI_NEON_MAGENTA,
+)
+from ui_chrome import (
+    draw_dim_overlay,
+    draw_overlay_panel,
+    draw_panel,
+    draw_status_panel_chrome,
+    load_ui_fonts,
 )
 from highscores import (
     board_key_for_mode,
@@ -98,12 +106,6 @@ from shoot_effect import ShootEffect
 
 logging.basicConfig(level=logging.WARNING)
 
-# Cyberpunk palette (HUD)
-_NEON_CYAN = (80, 240, 255)
-_NEON_MAGENTA = (255, 70, 180)
-_HUD_DIM = (180, 200, 220)
-_OVERLAY = (8, 4, 20, 180)
-
 LEVEL_CLEAR_AUTO_MS = 1800
 
 
@@ -112,8 +114,7 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
         pygame.display.set_caption("Bubble Trouble")
-        self.font = pygame.font.Font(None, 36)
-        self.big_font = pygame.font.Font(None, 64)
+        self.font, self.big_font, self.small_font = load_ui_fonts()
         self.current_level: Level = get_level(DEFAULT_LEVEL)
         self.background = build_arena_background(self.current_level.theme)
         self._menu_background = build_arena_background(
@@ -441,26 +442,7 @@ class Game:
 
     def _draw_status_panel(self) -> None:
         panel = pygame.Rect(0, PLAY_BOTTOM, SCREEN_WIDTH, HUD_PANEL_HEIGHT)
-        brick_h, brick_w = 14, 28
-        for row, y in enumerate(range(panel.top, panel.bottom, brick_h)):
-            offset = (brick_w // 2) if row % 2 else 0
-            for x in range(panel.left - offset, panel.right + brick_w, brick_w):
-                color = PANEL_BRICK_A if ((x // brick_w) + row) % 2 == 0 else PANEL_BRICK_B
-                pygame.draw.rect(
-                    self.screen,
-                    color,
-                    pygame.Rect(x, y, brick_w - 1, brick_h - 1),
-                )
-        pygame.draw.rect(self.screen, PANEL_FRAME, panel, width=3)
-        pygame.draw.line(
-            self.screen,
-            PANEL_FRAME,
-            (0, PLAY_BOTTOM),
-            (SCREEN_WIDTH, PLAY_BOTTOM),
-            2,
-        )
-        inner = panel.inflate(-10, -10)
-        pygame.draw.rect(self.screen, PANEL_FRAME_INNER, inner, width=1)
+        draw_status_panel_chrome(self.screen, panel)
 
     def _apply_powerup(self, power: Powerup, player: Player) -> None:
         if power.kind == "TIME":
@@ -624,7 +606,7 @@ class Game:
     def _draw_survival_chronometer(self) -> None:
         x, y = TIME_BAR_POS
         clock = format_time_ms(self.survival_elapsed_ms)
-        label = self.font.render(f"TIME  {clock}", True, _NEON_CYAN)
+        label = self.font.render(f"TIME  {clock}", True, UI_NEON_CYAN)
         self.screen.blit(label, (x, y + 2))
 
     def _draw_hud(self) -> None:
@@ -643,7 +625,7 @@ class Game:
                     True,
                     PANEL_FRAME,
                 )
-            name = self.font.render(self.current_level.name, True, _HUD_DIM)
+            name = self.font.render(self.current_level.name, True, UI_MUTED)
             lx = SCREEN_WIDTH - max(label.get_width(), name.get_width()) - 20
             self.screen.blit(label, (lx, PLAY_BOTTOM + 14))
             self.screen.blit(name, (lx, PLAY_BOTTOM + 40))
@@ -656,7 +638,7 @@ class Game:
                 if mode == "HARPOON":
                     continue
                 prefix = f"P{p.player_id} " if self.selected_mode == "2P" else ""
-                wlabel = self.font.render(f"{prefix}{mode}", True, _NEON_CYAN)
+                wlabel = self.font.render(f"{prefix}{mode}", True, UI_NEON_CYAN)
                 self.screen.blit(wlabel, (TIME_BAR_POS[0], weapon_y))
                 weapon_y += 20
 
@@ -671,100 +653,98 @@ class Game:
                     hint = self.font.render(
                         " · ".join(f"P{pid} down" for pid in down_ids),
                         True,
-                        _NEON_MAGENTA,
+                        UI_NEON_MAGENTA,
                     )
                     self.screen.blit(hint, (12, PLAY_BOTTOM - 28))
 
         if self.state in ("won", "game_over", "level_clear", "initials"):
-            dim = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), flags=pygame.SRCALPHA)
-            dim.fill(_OVERLAY)
-            self.screen.blit(dim, (0, 0))
+            draw_dim_overlay(self.screen)
 
         play_mid_y = PLAY_TOP + (PLAY_BOTTOM - PLAY_TOP) // 2
         if self.state == "level_clear":
-            msg = self.big_font.render("LEVEL CLEAR", True, _NEON_CYAN)
-            hint = self.font.render(
-                f"Enter -> Level {self.selected_level + 1} · M menu",
-                True,
-                _HUD_DIM,
-            )
-            self.screen.blit(
-                msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20))
-            )
-            self.screen.blit(
-                hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30))
+            draw_overlay_panel(
+                self.screen,
+                title="LEVEL CLEAR",
+                title_color=UI_NEON_CYAN,
+                lines=[
+                    (
+                        f"ENTER → Level {self.selected_level + 1}  ·  M menu",
+                        UI_MUTED,
+                    )
+                ],
+                center_y=play_mid_y,
+                font=self.font,
+                big_font=self.big_font,
             )
         elif self.state == "won":
-            msg = self.big_font.render("YOU WIN", True, _NEON_CYAN)
-            hint = self.font.render("R retry · M menu", True, _HUD_DIM)
-            self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20)))
-            self.screen.blit(hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30)))
+            draw_overlay_panel(
+                self.screen,
+                title="YOU WIN",
+                title_color=UI_NEON_CYAN,
+                lines=[("R retry  ·  M menu", UI_MUTED)],
+                center_y=play_mid_y,
+                font=self.font,
+                big_font=self.big_font,
+            )
         elif self.state == "initials":
             self._draw_initials_overlay(play_mid_y)
         elif self.state == "game_over":
-            msg = self.big_font.render("GAME OVER", True, _NEON_MAGENTA)
-            self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 40)))
+            lines: list[tuple[str, tuple[int, int, int]]] = []
             if self._is_survival():
                 clock = format_time_ms(self.survival_elapsed_ms)
-                time_line = self.font.render(f"Time  {clock}", True, _NEON_CYAN)
-                self.screen.blit(
-                    time_line,
-                    time_line.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 4)),
-                )
-                y_hint = play_mid_y + 40
+                lines.append((f"Time  {clock}", UI_NEON_CYAN))
                 if self._survival_rank:
-                    rank_line = self.font.render(
-                        f"New record! Rank #{self._survival_rank}",
-                        True,
-                        (255, 220, 80),
+                    lines.append(
+                        (f"New record! Rank #{self._survival_rank}", UI_NEON_GOLD)
                     )
-                    self.screen.blit(
-                        rank_line,
-                        rank_line.get_rect(center=(SCREEN_WIDTH // 2, y_hint)),
-                    )
-                    y_hint += 32
-                hint = self.font.render("R retry · M menu", True, _HUD_DIM)
-                self.screen.blit(
-                    hint, hint.get_rect(center=(SCREEN_WIDTH // 2, y_hint))
-                )
-            else:
-                hint = self.font.render("R retry · M menu", True, _HUD_DIM)
-                self.screen.blit(
-                    hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 30))
-                )
+            lines.append(("R retry  ·  M menu", UI_MUTED))
+            draw_overlay_panel(
+                self.screen,
+                title="GAME OVER",
+                title_color=UI_NEON_MAGENTA,
+                lines=lines,
+                center_y=play_mid_y,
+                font=self.font,
+                big_font=self.big_font,
+            )
 
     def _draw_initials_overlay(self, play_mid_y: int) -> None:
-        msg = self.big_font.render("NEW HIGH SCORE", True, (255, 220, 80))
         clock = format_time_ms(self.survival_elapsed_ms)
-        time_line = self.font.render(f"Time  {clock}", True, _NEON_CYAN)
-        prompt = self.font.render("Enter initials", True, _HUD_DIM)
-        self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 70)))
+        panel = pygame.Rect(0, 0, 420, 260)
+        panel.center = (SCREEN_WIDTH // 2, play_mid_y + 20)
+        draw_panel(self.screen, panel)
+
+        msg = self.big_font.render("NEW HIGH SCORE", True, UI_NEON_GOLD)
+        time_line = self.font.render(f"Time  {clock}", True, UI_NEON_CYAN)
+        prompt = self.font.render("Enter initials", True, UI_MUTED)
+        self.screen.blit(msg, msg.get_rect(center=(SCREEN_WIDTH // 2, panel.top + 36)))
         self.screen.blit(
-            time_line, time_line.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y - 20))
+            time_line, time_line.get_rect(center=(SCREEN_WIDTH // 2, panel.top + 78))
         )
         self.screen.blit(
-            prompt, prompt.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 16))
+            prompt, prompt.get_rect(center=(SCREEN_WIDTH // 2, panel.top + 112))
         )
 
         letter_gap = 48
         start_x = SCREEN_WIDTH // 2 - letter_gap
+        letter_y = panel.top + 168
         for i, ch in enumerate(self._initials):
-            color = (255, 220, 80) if i == self._initials_index else _NEON_CYAN
+            color = UI_NEON_GOLD if i == self._initials_index else UI_NEON_CYAN
             letter = self.big_font.render(ch, True, color)
             lx = start_x + i * letter_gap
-            self.screen.blit(letter, letter.get_rect(center=(lx, play_mid_y + 70)))
+            self.screen.blit(letter, letter.get_rect(center=(lx, letter_y)))
             if i == self._initials_index:
                 underline = pygame.Rect(0, 0, 28, 3)
-                underline.center = (lx, play_mid_y + 92)
+                underline.center = (lx, letter_y + 22)
                 pygame.draw.rect(self.screen, color, underline)
 
         hint = self.font.render(
-            "Left/Right letter · Enter next · type A-Z",
+            "←/→ letter  ·  ENTER next  ·  type A-Z",
             True,
-            _HUD_DIM,
+            UI_MUTED,
         )
         self.screen.blit(
-            hint, hint.get_rect(center=(SCREEN_WIDTH // 2, play_mid_y + 130))
+            hint, hint.get_rect(center=(SCREEN_WIDTH // 2, panel.bottom - 28))
         )
 
     def _go_menu(self) -> None:
@@ -787,7 +767,7 @@ class Game:
         if self._notice is None or now >= self._notice_until:
             self._notice = None
             return
-        hint = self.font.render(self._notice, True, _NEON_CYAN)
+        hint = self.font.render(self._notice, True, UI_NEON_CYAN)
         self.screen.blit(
             hint, hint.get_rect(center=(SCREEN_WIDTH // 2, PLAY_BOTTOM - 36))
         )

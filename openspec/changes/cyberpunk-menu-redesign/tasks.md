@@ -13,8 +13,8 @@
 
 ## 3. Match HUD and overlays
 
-- [ ] 3.1 Replace Pang brick bottom status panel with cyberpunk panel chrome; keep time barrier + level indicator
-- [ ] 3.2 Restyle game over / win / level clear / initials overlays to cyberpunk chrome; keep R/M (and existing) controls
+- [x] 3.1 Replace Pang brick bottom status panel with cyberpunk panel chrome; keep time barrier + level indicator
+- [x] 3.2 Restyle game over / win / level clear / initials overlays to cyberpunk chrome; keep R/M (and existing) controls
 
 ## 4. Polish and verify
 

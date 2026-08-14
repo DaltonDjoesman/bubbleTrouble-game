@@ -643,24 +643,38 @@ class Game:
             # Level plate on the right — dark plate for contrast on brick
             if self._is_survival():
                 label = self.font.render("SURVIVAL", True, HUD_TEXT)
+                name = None
             else:
                 label = self.font.render(
                     f"LEVEL {self.current_level.id}",
                     True,
                     HUD_TEXT,
                 )
-            name = self.font.render(self.current_level.name, True, HUD_TEXT_DIM)
+                name = self.font.render(self.current_level.name, True, HUD_TEXT_DIM)
             pad = 10
-            plate_w = max(label.get_width(), name.get_width()) + pad * 2
-            plate_h = label.get_height() + name.get_height() + 10
+            name_w = name.get_width() if name is not None else 0
+            name_h = name.get_height() if name is not None else 0
+            plate_w = max(label.get_width(), name_w) + pad * 2
+            plate_h = label.get_height() + (name_h + 10 if name is not None else 8)
             plate = pygame.Rect(0, 0, plate_w, plate_h)
             plate.topright = (SCREEN_WIDTH - 12, PLAY_BOTTOM + 10)
             plate_surf = pygame.Surface(plate.size, flags=pygame.SRCALPHA)
             plate_surf.fill(HUD_TEXT_PLATE)
             self.screen.blit(plate_surf, plate.topleft)
             pygame.draw.rect(self.screen, PANEL_FRAME, plate, width=1, border_radius=4)
-            self.screen.blit(label, (plate.left + pad, plate.top + 4))
-            self.screen.blit(name, (plate.left + pad, plate.top + 4 + label.get_height() + 2))
+            if name is None:
+                self.screen.blit(
+                    label,
+                    (
+                        plate.left + pad,
+                        plate.top + (plate_h - label.get_height()) // 2,
+                    ),
+                )
+            else:
+                self.screen.blit(label, (plate.left + pad, plate.top + 4))
+                self.screen.blit(
+                    name, (plate.left + pad, plate.top + 4 + label.get_height() + 2)
+                )
 
             living = self._living_players()
             # Weapon mode under the time / chronometer (inside the panel)

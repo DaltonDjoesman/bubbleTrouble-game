@@ -24,6 +24,6 @@
 
 ## 5. Full-window screenshots and GIF
 
-- [ ] 5.1 Capture `docs/screens/menu.png`, `campaign.png`, `survival.png`, and `high-scores.png` from the pygame framebuffer at 800×600 (entire window, no crop)
-- [ ] 5.2 Capture `docs/screens/play.gif` as a short in-match campaign loop at native 800×600 (entire window, including bottom status panel)
-- [ ] 5.3 Embed the four PNGs and the GIF in README; verify each image is full-window (campaign/Survival/GIF show the HUD panel)
+- [x] 5.1 Capture `docs/screens/menu.png`, `campaign.png`, `survival.png`, and `high-scores.png` from the pygame framebuffer at 800×600 (entire window, no crop)
+- [x] 5.2 Capture `docs/screens/play.gif` as a short in-match campaign loop at native 800×600 (entire window, including bottom status panel)
+- [x] 5.3 Embed the four PNGs and the GIF in README; verify each image is full-window (campaign/Survival/GIF show the HUD panel)

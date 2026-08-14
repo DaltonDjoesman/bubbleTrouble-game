@@ -39,6 +39,20 @@ The game opens on the main menu (800×600). A match does not start until you con
 
 Rules in detail: [docs/gameplay.md](docs/gameplay.md).
 
+## Screenshots
+
+Full 800×600 window (arena plus bottom status panel, or the menu shell — not a cropped playfield).
+
+![Main menu](docs/screens/menu.png)
+
+![Campaign match](docs/screens/campaign.png)
+
+![Survival match](docs/screens/survival.png)
+
+![High Scores](docs/screens/high-scores.png)
+
+![In-match campaign loop](docs/screens/play.gif)
+
 ## Controls
 
 | Player | Move | Fire |

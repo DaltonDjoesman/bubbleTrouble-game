@@ -1,0 +1,2286 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bubble Trouble - Cyberpunk Arcade</title>
+  
+  <!-- Estilização Base e Variáveis Modernas -->
+  <style>
+    :root {
+      --color-bg: #050508;
+      --color-cabinet: #111118;
+      --color-screen-bg: #09090f;
+      --color-border: #1a1a2b;
+      --color-fg: #f0f0f5;
+      --color-muted: #6e6e80;
+      
+      /* Neon Cyberpunk Palette (Substitutos de OKLch) */
+      --neon-cyan: #00f0ff;
+      --neon-magenta: #ff0055;
+      --neon-gold: #ffb700;
+      --neon-green: #00ff66;
+      
+      --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--color-bg);
+      background-image: 
+        radial-gradient(circle at 50% 50%, #151525 0%, #050508 100%),
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+      background-size: 100% 100%, 100% 4px, 6px 100%;
+      color: var(--color-fg);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Gabinete de Arcade Retro */
+    .arcade-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding: 20px;
+    }
+
+    .arcade-cabinet {
+      background-color: var(--color-cabinet);
+      border-left: 16px solid #222232;
+      border-right: 16px solid #222232;
+      border-top: 10px solid #2d2d42;
+      border-bottom: 20px solid #0a0a0f;
+      box-shadow: 
+        0 0 40px rgba(0, 0, 0, 0.95),
+        0 0 20px rgba(0, 240, 255, 0.1),
+        0 0 60px rgba(255, 0, 85, 0.08);
+      display: flex;
+      flex-direction: column;
+      width: 960px;
+      max-width: 100%;
+      height: 740px;
+      max-height: 100%;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .cabinet-header {
+      height: 60px;
+      background: linear-gradient(180deg, #09090f 0%, #151522 100%);
+      border-bottom: 3px solid var(--neon-magenta);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      box-shadow: 0 4px 15px rgba(255, 0, 85, 0.25);
+    }
+
+    .marquee-text-side {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--neon-gold);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    .marquee-title {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 240, 255, 0.3);
+      letter-spacing: 0.2em;
+      text-align: center;
+    }
+
+    .cabinet-screen-area {
+      flex-grow: 1;
+      background-color: #030307;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .crt-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background-color: var(--color-screen-bg);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.95);
+      border: 6px solid #1a1a24;
+    }
+
+    /* overlays visuais de CRT - pointer-events none garante cliques passando direto */
+    .crt-scanlines {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.2) 50%
+      );
+      background-size: 100% 4px;
+      z-index: 8;
+      pointer-events: none;
+    }
+
+    .crt-glow {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(
+        circle at 50% 50%, 
+        rgba(255, 255, 255, 0.02) 0%, 
+        rgba(0, 0, 0, 0.3) 100%
+      );
+      z-index: 9;
+      pointer-events: none;
+    }
+
+    .crt-flicker {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(18, 16, 16, 0.012);
+      opacity: 0.1;
+      z-index: 10;
+      pointer-events: none;
+      animation: crt-flicker-anim 0.25s infinite;
+    }
+
+    @keyframes crt-flicker-anim {
+      0% { opacity: 0.10; }
+      50% { opacity: 0.12; }
+      100% { opacity: 0.10; }
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.4; }
+      to { opacity: 1; }
+    }
+
+    /* Painel de Controle Físico do Cabinet */
+    .cabinet-panel {
+      height: 110px;
+      background: linear-gradient(180deg, #151522 0%, #08080f 100%);
+      border-top: 3px solid var(--neon-cyan);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 15px;
+      box-shadow: inset 0 8px 16px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    .control-deck {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .control-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--color-muted);
+      text-align: center;
+      margin-top: 5px;
+      letter-spacing: 0.1em;
+    }
+
+    /* Joysticks Virtuais */
+    .joystick-base {
+      width: 50px;
+      height: 50px;
+      background: #09090f;
+      border: 3px solid #2d2d42;
+      border-radius: 50%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 4px 10px rgba(0,0,0,0.8);
+    }
+
+    .joystick-knob {
+      width: 24px;
+      height: 24px;
+      background: radial-gradient(circle at 35% 35%, #ff3b30 0%, #8b0000 100%);
+      border-radius: 50%;
+      position: absolute;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease;
+    }
+
+    .joystick-knob.tilt-left { transform: translate(-10px, 0); }
+    .joystick-knob.tilt-right { transform: translate(10px, 0); }
+
+    /* Botões Arcade de Ação */
+    .arcade-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      box-shadow: 
+        0 4px 0px #000,
+        0 6px 10px rgba(0,0,0,0.6);
+      position: relative;
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+    }
+
+    .arcade-button:active, .arcade-button.pressed {
+      transform: translateY(3px);
+      box-shadow: 
+        0 1px 0px #000,
+        0 2px 5px rgba(0,0,0,0.4);
+    }
+
+    .arcade-button.cyan {
+      background: radial-gradient(circle at 35% 35%, var(--neon-cyan) 0%, #007a87 100%);
+      border: 2px solid #00f0ff;
+    }
+
+    .arcade-button.magenta {
+      background: radial-gradient(circle at 35% 35%, var(--neon-magenta) 0%, #8f002b 100%);
+      border: 2px solid #ff0055;
+    }
+
+    .coin-entry {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #08080f;
+      border: 2px solid #222230;
+      padding: 5px 12px;
+      border-radius: 4px;
+    }
+
+    .coin-slot {
+      width: 14px;
+      height: 24px;
+      background: #ff5e00;
+      box-shadow: 0 0 8px #ff5e00;
+      border-radius: 2px;
+      margin-bottom: 4px;
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    .coin-text {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--neon-gold);
+      font-weight: bold;
+    }
+
+    /* Conteúdo Principal React */
+    #root {
+      position: relative;
+      z-index: 15; /* Z-INDEX SUPERIOR PARA CLIQUE GARANTIDO */
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Warning de Erro / Loader Inicial */
+    #no-js-warning {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: var(--color-screen-bg);
+      color: var(--neon-magenta);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      padding: 30px;
+      z-index: 999;
+      text-align: center;
+    }
+
+    .system-loader-spinner {
+      border: 4px solid rgba(0, 240, 255, 0.1);
+      border-left-color: var(--neon-cyan);
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Estilos Gerais de Telas do Jogo */
+    .game-screen {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 25px;
+      box-sizing: border-box;
+      position: relative;
+      background-color: var(--color-screen-bg);
+    }
+  </style>
+
+  <!-- CDNs das Bibliotecas Requeridas -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tratamento de Erros e Logs Críticos na Tela para Depuração Directa -->
+  <script>
+    window.addEventListener('error', function(e) {
+      const errorDiv = document.getElementById('loader-error-logs');
+      const warningScreen = document.getElementById('no-js-warning');
+      if (errorDiv && warningScreen) {
+        warningScreen.style.color = '#ff0055';
+        errorDiv.innerHTML = `
+          <div style="font-weight:bold; font-size:16px; margin-bottom:10px;">BOOT FAILURE DETECTED:</div>
+          <div style="text-align:left; background:#181825; padding:12px; border:1px solid #ff0055; font-size:11px; white-space:pre-wrap; max-height:200px; overflow-y:auto; color:#f0f0f5; margin-top:10px;">
+            Error: ${e.message}\nSource: ${e.filename}\nLine: ${e.lineno}:${e.colno}
+          </div>
+          <button onclick="window.location.reload()" style="margin-top:20px; background:#ff0055; color:#fff; border:none; padding:10px 20px; font-family:monospace; cursor:pointer; font-weight:bold; box-shadow:0 0 10px #ff0055;">FORCE REBOOT</button>
+        `;
+        const spinner = warningScreen.querySelector('.system-loader-spinner');
+        if (spinner) spinner.style.display = 'none';
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <div class="arcade-container">
+    <div class="arcade-cabinet">
+      
+      <!-- Cabeçalho Luminoso -->
+      <div class="cabinet-header">
+        <div class="marquee-text-side">★ INSERT COIN ★</div>
+        <div class="marquee-title">BUBBLE TROUBLE</div>
+        <div class="marquee-text-side">RETRO ARCADE</div>
+      </div>
+
+      <!-- Área de Tela CRT -->
+      <div class="cabinet-screen-area">
+        <div class="crt-container">
+          <!-- Filtros CRT Visuais Seguros -->
+          <div class="crt-scanlines"></div>
+          <div class="crt-glow"></div>
+          <div class="crt-flicker"></div>
+          
+          <!-- Tela de Boot e Fallback Integrada -->
+          <div id="no-js-warning">
+            <div class="system-loader-spinner"></div>
+            <div style="font-size:15px; letter-spacing:0.1em; margin-bottom:5px;">INITIALIZING BUBBLE ENGINE...</div>
+            <div style="font-size:11px; color:var(--color-muted);">Carregando scripts CDN e ativando sintetizador de áudio...</div>
+            <div id="loader-error-logs" style="margin-top:10px; width:100%;"></div>
+          </div>
+
+          <!-- Ponto de Montagem do React -->
+          <div id="root"></div>
+        </div>
+      </div>
+
+      <!-- Painel de Controle de Botões Arcade Físicos -->
+      <div class="cabinet-panel">
+        
+        <!-- Joystick Jogador 1 -->
+        <div class="control-deck">
+          <div class="joystick-group">
+            <div class="joystick-base">
+              <div class="joystick-knob" id="p1-joystick-knob"></div>
+            </div>
+            <div class="control-label">P1 STICK<br>(A / D)</div>
+          </div>
+          <!-- Botão Fire Jogador 1 -->
+          <div>
+            <button class="arcade-button cyan" id="p1-fire-btn"></button>
+            <div class="control-label">FIRE P1<br>(SPACE)</div>
+          </div>
+        </div>
+
+        <!-- Slot de Ficha Arcade -->
+        <div class="coin-entry">
+          <div class="coin-slot"></div>
+          <div class="coin-text">CREDITS: <span id="cabinet-credits">01</span></div>
+        </div>
+
+        <!-- Joystick e Botão Jogador 2 -->
+        <div class="control-deck">
+          <div>
+            <button class="arcade-button magenta" id="p2-fire-btn"></button>
+            <div class="control-label">FIRE P2<br>(ENTER)</div>
+          </div>
+          <div class="joystick-group">
+            <div class="joystick-base">
+              <div class="joystick-knob" id="p2-joystick-knob"></div>
+            </div>
+            <div class="control-label">P2 STICK<br>(← / →)</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Código Principal do Aplicativo (Babel) -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- SINTETIZADOR DE ÁUDIO WEB (Sem arquivos externos) ---
+    class AudioSynthEngine {
+      constructor() {
+        this.ctx = null;
+        this.musicVolume = 5;
+        this.sfxVolume = 6;
+        this.isPlayingMusic = false;
+        this.step = 0;
+        this.tempo = 125;
+        this.musicTimeout = null;
+
+        // Bassline Cyberpunk
+        this.bassNotes = ['C2', 'C2', 'D#2', 'D#2', 'G2', 'G2', 'A#2', 'G2',
+                           'G#2', 'G#2', 'C2', 'C2', 'F2', 'F2', 'A#2', 'G2'];
+        // Melodia de Fundo
+        this.leadNotes = ['C4', 'D#4', 'G4', 'A#4', 'C5', 'A#4', 'G4', 'D#4'];
+      }
+
+      init() {
+        if (this.ctx) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          this.ctx = new AudioContextClass();
+        }
+      }
+
+      updateVolume(music, sfx) {
+        this.musicVolume = music;
+        this.sfxVolume = sfx;
+        if (this.musicGain) {
+          this.musicGain.gain.value = (this.musicVolume / 10) * 0.15;
+        }
+      }
+
+      noteToFreq(note) {
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const key = note.slice(0, -1);
+        const octave = parseInt(note.slice(-1));
+        const keyIndex = notes.indexOf(key);
+        return 440 * Math.pow(2, (keyIndex - 9 + (octave - 4) * 12) / 12);
+      }
+
+      playTone(freq, type, duration, vol, endFreq = null) {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        if (endFreq) {
+          osc.frequency.exponentialRampToValueAtTime(endFreq, this.ctx.currentTime + duration);
+        }
+
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      }
+
+      startMusic() {
+        this.init();
+        if (this.isPlayingMusic) return;
+        this.isPlayingMusic = true;
+        this.step = 0;
+
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.value = (this.musicVolume / 10) * 0.15;
+        this.musicGain.connect(this.ctx.destination);
+
+        const runScheduler = () => {
+          if (!this.isPlayingMusic || !this.ctx) return;
+          const time = this.ctx.currentTime;
+          const stepDur = 60 / this.tempo / 2; // eighth notes
+
+          // Canal Bass
+          const bassNote = this.bassNotes[this.step % this.bassNotes.length];
+          const bassFreq = this.noteToFreq(bassNote);
+          const bassOsc = this.ctx.createOscillator();
+          const bassGain = this.ctx.createGain();
+
+          bassOsc.type = 'sawtooth';
+          bassOsc.frequency.setValueAtTime(bassFreq, time);
+          bassGain.gain.setValueAtTime(0.2, time);
+          bassGain.gain.exponentialRampToValueAtTime(0.001, time + stepDur * 0.95);
+
+          bassOsc.connect(bassGain);
+          bassGain.connect(this.musicGain);
+          bassOsc.start(time);
+          bassOsc.stop(time + stepDur);
+
+          // Canal Melody
+          if (this.step % 4 === 0) {
+            const leadNote = this.leadNotes[(this.step / 4) % this.leadNotes.length];
+            const leadFreq = this.noteToFreq(leadNote);
+            const leadOsc = this.ctx.createOscillator();
+            const leadGain = this.ctx.createGain();
+
+            leadOsc.type = 'triangle';
+            leadOsc.frequency.setValueAtTime(leadFreq, time);
+            leadGain.gain.setValueAtTime(0.12, time);
+            leadGain.gain.exponentialRampToValueAtTime(0.001, time + stepDur * 1.9);
+
+            leadOsc.connect(leadGain);
+            leadGain.connect(this.musicGain);
+            leadOsc.start(time);
+            leadOsc.stop(time + stepDur * 2);
+          }
+
+          this.step++;
+          this.musicTimeout = setTimeout(runScheduler, stepDur * 1000);
+        };
+
+        runScheduler();
+      }
+
+      stopMusic() {
+        this.isPlayingMusic = false;
+        if (this.musicTimeout) {
+          clearTimeout(this.musicTimeout);
+          this.musicTimeout = null;
+        }
+      }
+
+      playFire() {
+        this.init();
+        this.playTone(220, 'sawtooth', 0.2, (this.sfxVolume / 10) * 0.4, 1100);
+      }
+
+      playPop(size) {
+        this.init();
+        const vol = (this.sfxVolume / 10) * 0.6;
+        const start = size === 3 ? 160 : size === 2 ? 350 : 700;
+        const end = size === 3 ? 50 : size === 2 ? 100 : 220;
+        this.playTone(start, 'triangle', 0.22, vol, end);
+        this.playTone(2000, 'sawtooth', 0.03, vol * 0.3, 500);
+      }
+
+      playCollect() {
+        this.init();
+        const vol = (this.sfxVolume / 10) * 0.5;
+        this.playTone(523.25, 'sine', 0.08, vol); // C5
+        setTimeout(() => this.playTone(659.25, 'sine', 0.08, vol), 60); // E5
+        setTimeout(() => this.playTone(783.99, 'sine', 0.15, vol), 120); // G5
+      }
+
+      playClear() {
+        this.init();
+        const vol = (this.sfxVolume / 10) * 0.5;
+        const scale = [523, 587, 659, 698, 783, 880, 987, 1046];
+        scale.forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.15, vol, f * 1.02), i * 80);
+        });
+      }
+
+      playGameOver() {
+        this.init();
+        const vol = (this.sfxVolume / 10) * 0.6;
+        this.playTone(220, 'sawtooth', 0.6, vol, 45);
+        setTimeout(() => this.playTone(130, 'sawtooth', 0.4, vol, 30), 150);
+      }
+    }
+
+    const sound = new AudioSynthEngine();
+
+    // --- COMPONENTE DE ERRO SEGURO (Error Boundary) ---
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, errorInfo) {
+        console.error("ErrorBoundary detectou:", error, errorInfo);
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div style={{ padding: '30px', background: '#09090f', color: '#ff0055', fontFamily: 'monospace', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '3px solid #ff0055' }}>
+              <h2 style={{ fontSize: '20px', marginBottom: '10px' }}>SYSTEM RUNTIME CRASH</h2>
+              <p style={{ color: '#fff', fontSize: '12px', background: '#121220', padding: '15px', border: '1px solid #333', overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+                {this.state.error && this.state.error.toString()}
+              </p>
+              <button onClick={() => window.location.reload()} style={{ marginTop: '20px', background: '#ff0055', color: '#fff', border: 'none', padding: '12px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'monospace' }}>REINICIAR PROTÓTIPO</button>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    // --- MAIN REACT COMPONENT ---
+    function App() {
+      const [screen, setScreen] = useState('boot'); // boot -> root -> options/levels/scores/playing
+      const [mode, setMode] = useState('1P'); // 1P ou 2P
+      const [selectedMenuIdx, setSelectedMenuIdx] = useState(0);
+      const [musicVol, setMusicVol] = useState(5);
+      const [sfxVol, setSfxVol] = useState(7);
+      
+      const [levelTab, setLevelTab] = useState('campaign');
+      const [activeLevelIdx, setActiveLevelIdx] = useState(0);
+      const [scoresTab, setScoresTab] = useState('1P');
+      
+      const [gameRunning, setGameRunning] = useState(false);
+      const [campaignLevel, setCampaignLevel] = useState(1);
+      const [survivalHighTime, setSurvivalHighTime] = useState('02:15.00');
+
+      // Referência do Loop do Canvas
+      const canvasRef = useRef(null);
+      const gameLoopRef = useRef(null);
+
+      // Variáveis do Estado do Jogo (Física e Entidades)
+      const gameData = useRef({
+        players: [],
+        harpoons: [],
+        bubbles: [],
+        powerups: [],
+        particles: [],
+        floatingTexts: [],
+        barriers: [],
+        campaignTimer: 60.0,
+        survivalTimer: 0.0,
+        score: 0,
+        activeWeapon: 'standard',
+        gameStatus: 'active', // active, win, clear, gameover, initials
+        keys: {},
+        timeLastBubbleSpawned: 0,
+        levelClearCountdown: 0,
+        topScoreRank: 0,
+        initialsInput: ['A', 'A', 'A'],
+        activeInitialIdx: 0
+      });
+
+      // Configuração de Fases (Layouts e Barreiras)
+      const levelsList = [
+        { name: "Open Floor", desc: "No barriers · learn aiming and the timer", color: "#00f0ff" },
+        { name: "Barrier Lanes", desc: "Static barriers · crawl underneath", color: "#ffb700" },
+        { name: "Timed Gates", desc: "Timed door · cross while open", color: "#ff0055" },
+        { name: "Lane Clear", desc: "Clear the center lane · door opens", color: "#00ff66" },
+        { name: "Mix Master", desc: "Combined elements · maximum chaos", color: "#ff2a2a" }
+      ];
+
+      // Boot automático
+      useEffect(() => {
+        // Remover loader inicial HTML
+        const loader = document.getElementById('no-js-warning');
+        if (loader) loader.style.display = 'none';
+
+        // Timer de Boot de Sistemas
+        const timer = setTimeout(() => {
+          setScreen('root');
+          sound.init();
+        }, 1800);
+
+        return () => clearTimeout(timer);
+      }, []);
+
+      // Sincronizar Volumes com o Engine de Som
+      useEffect(() => {
+        sound.updateVolume(musicVol, sfxVol);
+      }, [musicVol, sfxVol]);
+
+      // Ativar música ao entrar em telas
+      useEffect(() => {
+        if (screen === 'playing') {
+          sound.startMusic();
+        } else {
+          sound.stopMusic();
+        }
+      }, [screen]);
+
+      // Controlar Teclas de Navegação nos Menus Gerais
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (screen === 'playing') return; // Jogo tem lógica própria de teclado
+
+          if (e.key === 'ArrowUp') {
+            if (screen === 'root') {
+              setSelectedMenuIdx(prev => (prev === 0 ? 4 : prev - 1));
+            } else if (screen === 'options') {
+              setSelectedMenuIdx(prev => (prev === 0 ? 2 : prev - 1));
+            } else if (screen === 'levels' && levelTab === 'campaign') {
+              setActiveLevelIdx(prev => (prev >= 2 ? prev - 2 : prev));
+            }
+          }
+          else if (e.key === 'ArrowDown') {
+            if (screen === 'root') {
+              setSelectedMenuIdx(prev => (prev === 4 ? 0 : prev + 1));
+            } else if (screen === 'options') {
+              setSelectedMenuIdx(prev => (prev === 2 ? 0 : prev + 1));
+            } else if (screen === 'levels' && levelTab === 'campaign') {
+              setActiveLevelIdx(prev => (prev <= 2 ? prev + 2 : prev));
+            }
+          }
+          else if (e.key === 'ArrowLeft') {
+            if (screen === 'root' && selectedMenuIdx === 1) {
+              setMode(prev => (prev === '1P' ? '2P' : '1P'));
+            } else if (screen === 'options') {
+              if (selectedMenuIdx === 0) setMusicVol(v => Math.max(0, v - 1));
+              if (selectedMenuIdx === 1) setSfxVol(v => Math.max(0, v - 1));
+            } else if (screen === 'levels') {
+              setLevelTab('campaign');
+            } else if (screen === 'scores') {
+              setScoresTab('1P');
+            }
+          }
+          else if (e.key === 'ArrowRight') {
+            if (screen === 'root' && selectedMenuIdx === 1) {
+              setMode(prev => (prev === '1P' ? '2P' : '1P'));
+            } else if (screen === 'options') {
+              if (selectedMenuIdx === 0) setMusicVol(v => Math.min(10, v + 1));
+              if (selectedMenuIdx === 1) setSfxVol(v => Math.min(10, v + 1));
+            } else if (screen === 'levels') {
+              setLevelTab('survival');
+            } else if (screen === 'scores') {
+              setScoresTab('2P');
+            }
+          }
+          else if (e.key === 'Enter' || e.key === ' ') {
+            if (screen === 'root') {
+              if (selectedMenuIdx === 0) setScreen('levels');
+              if (selectedMenuIdx === 2) setScreen('scores');
+              if (selectedMenuIdx === 3) setScreen('options');
+              if (selectedMenuIdx === 4) window.close();
+            } else if (screen === 'options') {
+              if (selectedMenuIdx === 2) setScreen('root');
+            } else if (screen === 'levels') {
+              if (levelTab === 'campaign') {
+                startGame(activeLevelIdx + 1, 'campaign');
+              } else {
+                startGame(1, 'survival');
+              }
+            } else if (screen === 'scores') {
+              setScreen('root');
+            }
+          }
+          else if (e.key === 'Escape') {
+            if (screen !== 'root') setScreen('root');
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [screen, selectedMenuIdx, levelTab, activeLevelIdx, mode, musicVol, sfxVol]);
+
+      // --- INICIALIZAR E COMANDAR JOGO (Gameplay Canvas) ---
+      const startGame = (levelNum, gameMode) => {
+        setScreen('playing');
+        setGameRunning(true);
+        
+        const is2P = mode === '2P';
+        const gd = gameData.current;
+        
+        gd.gameStatus = 'active';
+        gd.campaignTimer = 60.0;
+        gd.survivalTimer = 0.0;
+        gd.score = 0;
+        gd.activeWeapon = 'standard';
+        gd.floatingTexts = [];
+        gd.particles = [];
+        gd.harpoons = [];
+        gd.powerups = [];
+        gd.timeLastBubbleSpawned = Date.now();
+        gd.levelClearCountdown = 0;
+        
+        // Criar Jogadores
+        gd.players = [
+          {
+            id: 1,
+            x: is2P ? 250 : 390,
+            y: 420,
+            w: 24,
+            h: 38,
+            speed: 5,
+            active: true,
+            weapon: 'standard',
+            weaponDuration: 0,
+            color: '#00f0ff'
+          }
+        ];
+
+        if (is2P) {
+          gd.players.push({
+            id: 2,
+            x: 520,
+            y: 420,
+            w: 24,
+            h: 38,
+            speed: 5,
+            active: true,
+            weapon: 'standard',
+            weaponDuration: 0,
+            color: '#ff0055'
+          });
+        }
+
+        setupLevelGeometry(levelNum, gameMode);
+      };
+
+      const setupLevelGeometry = (levelNum, gameMode) => {
+        const gd = gameData.current;
+        gd.barriers = [];
+        gd.bubbles = [];
+
+        if (gameMode === 'campaign') {
+          setCampaignLevel(levelNum);
+          
+          if (levelNum === 1) {
+            // Nível 1: Uma bola grande, sem barreiras
+            gd.bubbles.push({ x: 400, y: 150, radius: 36, vx: 2, vy: 0, size: 3, gravity: 0.18 });
+          } 
+          else if (levelNum === 2) {
+            // Nível 2: Barreiras Estáticas
+            gd.barriers.push(
+              { x: 260, y: 0, w: 20, h: 220, type: 'static' },
+              { x: 520, y: 0, w: 20, h: 220, type: 'static' }
+            );
+            gd.bubbles.push(
+              { x: 150, y: 120, radius: 24, vx: -2, vy: 0, size: 2, gravity: 0.18 },
+              { x: 650, y: 120, radius: 24, vx: 2, vy: 0, size: 2, gravity: 0.18 }
+            );
+          }
+          else if (levelNum === 3) {
+            // Nível 3: Timed Gates (Portas que abrem e fecham)
+            gd.barriers.push({ x: 390, y: 0, w: 20, h: 260, type: 'timed', cycle: 0 });
+            gd.bubbles.push({ x: 180, y: 140, radius: 36, vx: 2.2, vy: 0, size: 3, gravity: 0.18 });
+          }
+          else if (levelNum === 4) {
+            // Nível 4: Lane Clear (Portas fechadas que abrem ao rebentar certa bolha)
+            gd.barriers.push(
+              { x: 280, y: 0, w: 20, h: 460, type: 'trigger-door', open: false, height: 460 },
+              { x: 500, y: 0, w: 20, h: 460, type: 'trigger-door', open: false, height: 460 }
+            );
+            gd.bubbles.push({ x: 390, y: 150, radius: 24, vx: 1.5, vy: 0, size: 2, gravity: 0.18, triggerId: 'main-key' });
+          }
+          else if (levelNum === 5) {
+            // Nível 5: Mix Master (O mais difícil da campanha)
+            gd.barriers.push(
+              { x: 200, y: 0, w: 20, h: 180, type: 'static' },
+              { x: 580, y: 0, w: 20, h: 180, type: 'static' },
+              { x: 390, y: 0, w: 20, h: 240, type: 'timed', cycle: 0 }
+            );
+            gd.bubbles.push(
+              { x: 100, y: 100, radius: 36, vx: 2.5, vy: 0, size: 3, gravity: 0.18 },
+              { x: 700, y: 100, radius: 36, vx: -2.5, vy: 0, size: 3, gravity: 0.18 }
+            );
+          }
+        } else {
+          // Modo Survival
+          setCampaignLevel(0);
+          gd.bubbles.push(
+            { x: 200, y: 150, radius: 24, vx: 1.8, vy: 0, size: 2, gravity: 0.18 },
+            { x: 600, y: 150, radius: 24, vx: -1.8, vy: 0, size: 2, gravity: 0.18 }
+          );
+        }
+      };
+
+      // Controladores do Teclado no Jogo
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          gameData.current.keys[e.key] = true;
+          
+          if (e.key === 'Escape') {
+            exitGame();
+          }
+          // Facilitar testes do menu
+          if (e.key === '1') { setupLevelGeometry(1, 'campaign'); }
+          if (e.key === '2') { setupLevelGeometry(2, 'campaign'); }
+          if (e.key === '3') { setupLevelGeometry(3, 'campaign'); }
+          if (e.key === '4') { setupLevelGeometry(4, 'campaign'); }
+          if (e.key === '5') { setupLevelGeometry(5, 'campaign'); }
+          if (e.key === 'c' || e.key === 'C') { triggerCheatClear(); }
+          if (e.key === 'k' || e.key === 'K') { triggerCheatGameOver(); }
+        };
+
+        const handleKeyUp = (e) => {
+          gameData.current.keys[e.key] = false;
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+          window.removeEventListener('keydown', handleKeyDown);
+          window.removeEventListener('keyup', handleKeyUp);
+        };
+      }, [screen]);
+
+      // Mapeamento dos botões arcade físicos para controlar o jogo
+      useEffect(() => {
+        const gd = gameData.current;
+        
+        // P1 Shoot
+        const p1FireBtn = document.getElementById('p1-fire-btn');
+        const handleP1Fire = () => { gd.keys[' '] = true; setTimeout(() => gd.keys[' '] = false, 100); };
+        if (p1FireBtn) p1FireBtn.addEventListener('click', handleP1Fire);
+
+        // P2 Shoot
+        const p2FireBtn = document.getElementById('p2-fire-btn');
+        const handleP2Fire = () => { gd.keys['Enter'] = true; setTimeout(() => gd.keys['Enter'] = false, 100); };
+        if (p2FireBtn) p2FireBtn.addEventListener('click', handleP2Fire);
+
+        // Joystick P1 (Clique simples para empurrar)
+        const p1Stick = document.getElementById('p1-joystick-knob');
+        const handleP1StickL = () => {
+          gd.keys['a'] = true; gd.keys['d'] = false;
+          if (p1Stick) p1Stick.className = 'joystick-knob tilt-left';
+          setTimeout(() => { gd.keys['a'] = false; if (p1Stick) p1Stick.className = 'joystick-knob'; }, 300);
+        };
+        if (p1Stick) p1Stick.addEventListener('mousedown', handleP1StickL);
+
+        // Joystick P2 (Clique simples para empurrar)
+        const p2Stick = document.getElementById('p2-joystick-knob');
+        const handleP2StickL = () => {
+          gd.keys['ArrowLeft'] = true; gd.keys['ArrowRight'] = false;
+          if (p2Stick) p2Stick.className = 'joystick-knob tilt-left';
+          setTimeout(() => { gd.keys['ArrowLeft'] = false; if (p2Stick) p2Stick.className = 'joystick-knob'; }, 300);
+        };
+        if (p2Stick) p2Stick.addEventListener('mousedown', handleP2StickL);
+
+        return () => {
+          if (p1FireBtn) p1FireBtn.removeEventListener('click', handleP1Fire);
+          if (p2FireBtn) p2FireBtn.removeEventListener('click', handleP2Fire);
+        };
+      }, []);
+
+      const exitGame = () => {
+        setGameRunning(false);
+        setScreen('root');
+        if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
+      };
+
+      const triggerCheatClear = () => {
+        gameData.current.bubbles = [];
+      };
+
+      const triggerCheatGameOver = () => {
+        const gd = gameData.current;
+        gd.players.forEach(p => p.active = false);
+        gd.gameStatus = 'gameover';
+        sound.playGameOver();
+      };
+
+      // Loop do Jogo no Canvas (Atualização e Desenho)
+      useEffect(() => {
+        if (!gameRunning || !canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const gd = gameData.current;
+
+        const updateGame = () => {
+          if (gd.gameStatus === 'active') {
+            // Atualizar tempo de campanha ou de sobrevivência
+            if (campaignLevel > 0) {
+              gd.campaignTimer -= 1 / 60;
+              if (gd.campaignTimer <= 0) {
+                gd.campaignTimer = 0;
+                gd.gameStatus = 'gameover';
+                sound.playGameOver();
+              }
+            } else {
+              gd.survivalTimer += 1 / 60;
+              // Spawns contínuos de bolhas em Survival a cada 16 segundos
+              if (Date.now() - gd.timeLastBubbleSpawned > 16000) {
+                gd.bubbles.push(
+                  { x: 100, y: 150, radius: 24, vx: 2, vy: 0, size: 2, gravity: 0.18 },
+                  { x: 700, y: 150, radius: 24, vx: -2, vy: 0, size: 2, gravity: 0.18 }
+                );
+                gd.floatingTexts.push({ x: 400, y: 200, text: "SURVIVAL WAVE INCOMING!", color: '#ffb700', life: 100 });
+                gd.timeLastBubbleSpawned = Date.now();
+              }
+            }
+
+            // Atualizar Jogadores e Movimentos
+            gd.players.forEach(player => {
+              if (!player.active) return;
+
+              // Controles P1
+              if (player.id === 1) {
+                if (gd.keys['a'] || gd.keys['A']) {
+                  player.x -= player.speed;
+                } else if (gd.keys['d'] || gd.keys['D']) {
+                  player.x += player.speed;
+                }
+
+                // Disparar Arpão P1
+                if (gd.keys[' ']) {
+                  fireHarpoon(player);
+                  gd.keys[' '] = false; // evitar disparos repetidos segurando tecla
+                }
+              }
+
+              // Controles P2
+              if (player.id === 2) {
+                if (gd.keys['ArrowLeft']) {
+                  player.x -= player.speed;
+                } else if (gd.keys['ArrowRight']) {
+                  player.x += player.speed;
+                }
+
+                // Disparar Arpão P2
+                if (gd.keys['Enter']) {
+                  fireHarpoon(player);
+                  gd.keys['Enter'] = false;
+                }
+              }
+
+              // Colisão de Jogadores com Paredes Laterais
+              if (player.x < 10) player.x = 10;
+              if (player.x > canvas.width - player.w - 10) player.x = canvas.width - player.w - 10;
+
+              // Reduzir timers de power-up de armas
+              if (player.weaponDuration > 0) {
+                player.weaponDuration -= 1 / 60;
+                if (player.weaponDuration <= 0) {
+                  player.weapon = 'standard';
+                }
+              }
+            });
+
+            // Atualizar Arpões (Lasers crescentes)
+            gd.harpoons.forEach((harpoon, index) => {
+              if (harpoon.state === 'growing') {
+                harpoon.y -= harpoon.speed;
+                
+                // Limite superior ou colisão com barreiras
+                let collidesBarrier = false;
+                gd.barriers.forEach(b => {
+                  if (b.type === 'static' || (b.type === 'timed' && b.height > 100)) {
+                    if (harpoon.x > b.x && harpoon.x < b.x + b.w && harpoon.y < b.y + b.h) {
+                      collidesBarrier = true;
+                    }
+                  }
+                });
+
+                if (harpoon.y <= 24 || collidesBarrier) {
+                  if (harpoon.type === 'sticky') {
+                    harpoon.state = 'stuck';
+                    harpoon.stuckTime = 120; // 2 segundos
+                  } else {
+                    gd.harpoons.splice(index, 1);
+                  }
+                }
+              } else if (harpoon.state === 'stuck') {
+                harpoon.stuckTime--;
+                if (harpoon.stuckTime <= 0) {
+                  gd.harpoons.splice(index, 1);
+                }
+              }
+            });
+
+            // Atualizar Barreiras Dinâmicas e Portas Temporárias
+            gd.barriers.forEach(b => {
+              if (b.type === 'timed') {
+                b.cycle += 0.015;
+                // Move verticalmente simulando abertura gradual
+                b.height = 130 + Math.sin(b.cycle) * 120;
+              } else if (b.type === 'trigger-door') {
+                if (b.open && b.height > 0) {
+                  b.height -= 4; // Slide para cima de abertura
+                }
+              }
+            });
+
+            // Atualizar Bolhas
+            gd.bubbles.forEach((bubble, bIdx) => {
+              bubble.vy += bubble.gravity;
+              bubble.x += bubble.vx;
+              bubble.y += bubble.vy;
+
+              const bounceLimit = 460 - bubble.radius;
+
+              // Rebotes no chão da arena
+              if (bubble.y >= bounceLimit) {
+                bubble.y = bounceLimit;
+                bubble.vy = bubble.size === 3 ? -10 : bubble.size === 2 ? -8.5 : -7;
+              }
+
+              // Rebotes nas paredes
+              if (bubble.x - bubble.radius <= 10) {
+                bubble.x = 10 + bubble.radius;
+                bubble.vx = -bubble.vx;
+              }
+              if (bubble.x + bubble.radius >= canvas.width - 10) {
+                bubble.x = canvas.width - 10 - bubble.radius;
+                bubble.vx = -bubble.vx;
+              }
+
+              // Colisão de Bolhas com Barreiras Estáticas/Móveis
+              gd.barriers.forEach(b => {
+                const bH = b.type === 'trigger-door' ? b.height : (b.type === 'timed' ? b.height : b.h);
+                // Ignorar portas totalmente abertas
+                if (bH <= 5) return;
+
+                // Caixa de Colisão aproximada AABB
+                const closeX = Math.max(b.x, Math.min(bubble.x, b.x + b.w));
+                const closeY = Math.max(b.y, Math.min(bubble.y, b.y + bH));
+                
+                const dx = bubble.x - closeX;
+                const dy = bubble.y - closeY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < bubble.radius) {
+                  // Inverter movimento dependendo do vetor de colisão
+                  if (Math.abs(dx) > Math.abs(dy)) {
+                    bubble.vx = -bubble.vx;
+                    bubble.x += dx > 0 ? 3 : -3;
+                  } else {
+                    bubble.vy = -bubble.vy * 0.9;
+                    bubble.y += dy > 0 ? 3 : -3;
+                  }
+                }
+              });
+
+              // Colisão com Arpões / Disparos
+              gd.harpoons.forEach((harpoon, hIdx) => {
+                const withinX = Math.abs(bubble.x - harpoon.x) < bubble.radius;
+                const withinY = bubble.y + bubble.radius > harpoon.y && bubble.y - bubble.radius < harpoon.startY;
+
+                if (withinX && withinY) {
+                  popBubble(bIdx, bubble);
+                  if (harpoon.type !== 'drill') {
+                    gd.harpoons.splice(hIdx, 1);
+                  }
+                }
+              });
+
+              // Colisão com Jogadores (Impacto Fatal)
+              gd.players.forEach(player => {
+                if (!player.active) return;
+                const pCenterX = player.x + player.w / 2;
+                const pCenterY = player.y + player.h / 2;
+
+                const distanceToPlayer = Math.sqrt(
+                  Math.pow(bubble.x - pCenterX, 2) + Math.pow(bubble.y - pCenterY, 2)
+                );
+
+                if (distanceToPlayer < bubble.radius + 14) {
+                  player.active = false;
+                  sound.playPop(1); // efeito de morte rápida
+                  
+                  // Verificar se todos os jogadores morreram
+                  const anyAlive = gd.players.some(p => p.active);
+                  if (!anyAlive) {
+                    gd.gameStatus = 'gameover';
+                    sound.playGameOver();
+                    
+                    // Salvar Recorde no Survival
+                    if (campaignLevel === 0) {
+                      checkAndSaveSurvivalScore();
+                    }
+                  }
+                }
+              });
+            });
+
+            // Atualizar Queda de Itens (Power-ups)
+            gd.powerups.forEach((pu, index) => {
+              pu.y += 2.5;
+
+              // Coleta por jogador
+              gd.players.forEach(player => {
+                if (!player.active) return;
+                const withinX = Math.abs(pu.x - (player.x + player.w/2)) < 24;
+                const withinY = Math.abs(pu.y - (player.y + player.h/2)) < 24;
+
+                if (withinX && withinY) {
+                  sound.playCollect();
+                  applyPowerup(pu.type, player);
+                  gd.powerups.splice(index, 1);
+                }
+              });
+
+              if (pu.y > 450) {
+                gd.powerups.splice(index, 1);
+              }
+            });
+
+            // Checagem de Fim de Nível (Campanha)
+            if (campaignLevel > 0 && gd.bubbles.length === 0 && gd.gameStatus === 'active') {
+              gd.gameStatus = 'clear';
+              sound.playClear();
+              gd.levelClearCountdown = 110; // ~2 segundos a 60fps
+            }
+          } else if (gd.gameStatus === 'clear') {
+            gd.levelClearCountdown--;
+            if (gd.levelClearCountdown <= 0) {
+              advanceLevel();
+            }
+          }
+
+          // Partículas de Fumaça/Estrelas
+          gd.particles.forEach((part, index) => {
+            part.x += part.vx;
+            part.y += part.vy;
+            part.life--;
+            if (part.life <= 0) gd.particles.splice(index, 1);
+          });
+
+          // Textos Flutuantes
+          gd.floatingTexts.forEach((ft, index) => {
+            ft.y -= 0.6;
+            ft.life--;
+            if (ft.life <= 0) gd.floatingTexts.splice(index, 1);
+          });
+        };
+
+        const popBubble = (index, bubble) => {
+          const gd = gameData.current;
+          sound.playPop(bubble.size);
+          
+          // Spawn de Partículas
+          for (let i = 0; i < 8; i++) {
+            gd.particles.push({
+              x: bubble.x,
+              y: bubble.y,
+              vx: (Math.random() - 0.5) * 6,
+              vy: (Math.random() - 0.5) * 6,
+              color: levelsList[campaignLevel ? campaignLevel - 1 : 0].color,
+              life: 30
+            });
+          }
+
+          gd.score += bubble.size * 150;
+
+          // Se for gatilho de porta (Nível 4)
+          if (bubble.triggerId === 'main-key') {
+            gd.barriers.forEach(b => {
+              if (b.type === 'trigger-door') b.open = true;
+            });
+            gd.floatingTexts.push({ x: bubble.x, y: bubble.y, text: "ACCESS GATES OPEN!", color: '#00ff66', life: 80 });
+          }
+
+          // Se for tamanho Médio/Grande, se divide
+          if (bubble.size > 1) {
+            const nextSize = bubble.size - 1;
+            const nextRadius = bubble.radius / 1.7;
+            gd.bubbles.push(
+              { x: bubble.x - 15, y: bubble.y - 10, radius: nextRadius, vx: -2.2, vy: -5, size: nextSize, gravity: 0.18 },
+              { x: bubble.x + 15, y: bubble.y - 10, radius: nextRadius, vx: 2.2, vy: -5, size: nextSize, gravity: 0.18 }
+            );
+          }
+
+          // Oportunidade de Dropar Item de Power-up (18% de chance)
+          if (Math.random() < 0.22) {
+            const types = ['TIME', 'STICKY', 'DRILL'];
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            gd.powerups.push({ x: bubble.x, y: bubble.y, type: randomType });
+          }
+
+          gd.bubbles.splice(index, 1);
+        };
+
+        const applyPowerup = (type, player) => {
+          const gd = gameData.current;
+          if (type === 'TIME') {
+            if (campaignLevel > 0) {
+              gd.campaignTimer = Math.min(60, gd.campaignTimer + 10);
+              gd.floatingTexts.push({ x: player.x, y: player.y - 20, text: "+10 SECONDS", color: '#00f0ff', life: 60 });
+            } else {
+              gd.floatingTexts.push({ x: player.x, y: player.y - 20, text: "TIME BONUS +10s", color: '#ffb700', life: 60 });
+            }
+          } else {
+            player.weapon = type.toLowerCase();
+            player.weaponDuration = 12.0; // 12 segundos de arma aprimorada
+            gd.floatingTexts.push({ x: player.x, y: player.y - 20, text: `${type} WEAPON ACTIVE!`, color: '#ff00ff', life: 60 });
+          }
+        };
+
+        const fireHarpoon = (player) => {
+          const activeHarpoonsCount = gd.harpoons.filter(h => h.player === player.id).length;
+          if (activeHarpoonsCount >= 1) return; // limite retro de 1 disparo por vez
+
+          sound.playFire();
+
+          let hType = player.weapon;
+          let hSpeed = hType === 'drill' ? 5.5 : 8.5;
+
+          gd.harpoons.push({
+            x: player.x + player.w / 2,
+            y: player.y,
+            startY: player.y,
+            speed: hSpeed,
+            type: hType,
+            state: 'growing',
+            player: player.id,
+            stuckTime: 0
+          });
+        };
+
+        const advanceLevel = () => {
+          if (campaignLevel < 5) {
+            setupLevelGeometry(campaignLevel + 1, 'campaign');
+          } else {
+            gd.gameStatus = 'win';
+            sound.playClear();
+          }
+        };
+
+        const checkAndSaveSurvivalScore = () => {
+          const totalSec = gd.survivalTimer;
+          const scoresKey = mode === '1P' ? 'scores_1p' : 'scores_2p';
+          let localScores = JSON.parse(localStorage.getItem(scoresKey) || '[]');
+          
+          if (localScores.length < 5 || totalSec > localScores[localScores.length - 1].rawTime) {
+            gd.gameStatus = 'initials';
+            gd.activeInitialIdx = 0;
+            gd.initialsInput = ['A', 'A', 'A'];
+          }
+        };
+
+        // --- RENDERIZADOR GRÁFICO (Canvas Draw) ---
+        const drawGame = () => {
+          ctx.fillStyle = '#07070c';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Desenhar Grade de Fundo (Perspectiva 3D Cyberpunk)
+          ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+          ctx.lineWidth = 1;
+          const gridOffset = (Date.now() / 35) % 40;
+          for (let y = 140; y < floorY; y += 30) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+          }
+          const vpX = 400;
+          const vpY = 80;
+          for (let x = -200; x <= canvas.width + 200; x += 50) {
+            ctx.beginPath();
+            ctx.moveTo(x, 460);
+            ctx.lineTo(vpX + (x - vpX) * 0.15, vpY);
+            ctx.stroke();
+          }
+
+          // Teto de Espigões Neon
+          ctx.fillStyle = 'rgba(255, 0, 85, 0.15)';
+          ctx.fillRect(0, 0, canvas.width, 24);
+          ctx.strokeStyle = varColor('--neon-magenta');
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          for (let x = 0; x < canvas.width; x += 16) {
+            ctx.lineTo(x, 24);
+            ctx.lineTo(x + 8, 8);
+          }
+          ctx.stroke();
+
+          // Desenhar Chão
+          ctx.fillStyle = '#11111c';
+          ctx.fillRect(0, 460, canvas.width, 40);
+          ctx.strokeStyle = varColor('--neon-cyan');
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(0, 460);
+          ctx.lineTo(canvas.width, 460);
+          ctx.stroke();
+
+          // Desenhar Barreiras e Portas
+          gd.barriers.forEach(b => {
+            const currentHeight = b.type === 'trigger-door' ? b.height : (b.type === 'timed' ? b.height : b.h);
+            
+            // Fundo da barreira
+            ctx.fillStyle = 'rgba(26, 26, 43, 0.9)';
+            ctx.fillRect(b.x, b.y, b.w, currentHeight);
+            
+            // Contorno Neon
+            ctx.strokeStyle = b.type === 'timed' ? varColor('--neon-magenta') : varColor('--neon-gold');
+            ctx.lineWidth = 2;
+            ctx.strokeRect(b.x, b.y, b.w, currentHeight);
+
+            // Detalhes de Listras Técnicas
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.beginPath();
+            for (let ly = b.y + 10; ly < b.y + currentHeight; ly += 15) {
+              ctx.moveTo(b.x + 2, ly);
+              ctx.lineTo(b.x + b.w - 2, ly - 5);
+            }
+            ctx.stroke();
+          });
+
+          // Desenhar Arpões (Lasers)
+          gd.harpoons.forEach(h => {
+            const glow = h.type === 'sticky' ? varColor('--neon-magenta') : (h.type === 'drill' ? varColor('--neon-gold') : varColor('--neon-cyan'));
+            
+            ctx.strokeStyle = glow;
+            ctx.lineWidth = h.type === 'drill' ? 5 : 3;
+            ctx.beginPath();
+            ctx.moveTo(h.x, h.startY);
+            ctx.lineTo(h.x, h.y);
+            ctx.stroke();
+
+            // Cabeça do arpão/laser
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            if (h.type === 'sticky') {
+              ctx.arc(h.x, h.y, 7, 0, Math.PI * 2);
+            } else if (h.type === 'drill') {
+              ctx.moveTo(h.x - 6, h.y + 5);
+              ctx.lineTo(h.x + 6, h.y + 5);
+              ctx.lineTo(h.x, h.y - 8);
+            } else {
+              ctx.moveTo(h.x - 5, h.y + 8);
+              ctx.lineTo(h.x + 5, h.y + 8);
+              ctx.lineTo(h.x, h.y);
+            }
+            ctx.fill();
+          });
+
+          // Desenhar Power-ups Cadentes
+          gd.powerups.forEach(pu => {
+            const col = pu.type === 'TIME' ? varColor('--neon-cyan') : (pu.type === 'STICKY' ? varColor('--neon-magenta') : varColor('--neon-gold'));
+            
+            ctx.fillStyle = '#151522';
+            ctx.strokeStyle = col;
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.arc(pu.x, pu.y, 11, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Texto Interno
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 9px var(--font-mono)';
+            ctx.textAlign = 'center';
+            ctx.fillText(pu.type[0], pu.x, pu.y + 3);
+          });
+
+          // Desenhar Jogadores
+          gd.players.forEach(player => {
+            if (!player.active) return;
+
+            // Corpo/Silhueta Estilo Ciborgue
+            ctx.fillStyle = '#1a1a2e';
+            ctx.strokeStyle = player.color;
+            ctx.lineWidth = 2.5;
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.strokeRect(player.x, player.y, player.w, player.h);
+
+            // Visor Iluminado
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x + 4, player.y + 6, player.w - 8, 5);
+
+            // Canhão Acoplado
+            ctx.fillStyle = '#44445c';
+            ctx.fillRect(player.x + player.w/2 - 3, player.y - 6, 6, 6);
+
+            // Indicador de Arma Aprimorada
+            if (player.weapon !== 'standard') {
+              ctx.fillStyle = varColor('--neon-magenta');
+              ctx.beginPath();
+              ctx.arc(player.x + player.w/2, player.y - 12, 3, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+
+          // Desenhar Bolhas
+          gd.bubbles.forEach(bubble => {
+            const levelCol = levelsList[campaignLevel ? campaignLevel - 1 : 0].color;
+            
+            // Efeito Radial Gloss
+            const grad = ctx.createRadialGradient(
+              bubble.x - bubble.radius * 0.3,
+              bubble.y - bubble.radius * 0.3,
+              bubble.radius * 0.1,
+              bubble.x,
+              bubble.y,
+              bubble.radius
+            );
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.3, levelCol);
+            grad.addColorStop(1, '#05050a');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Brilho Externo Circular
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(bubble.x - bubble.radius * 0.2, bubble.y - bubble.radius * 0.2, bubble.radius * 0.7, Math.PI * 1.2, Math.PI * 1.8);
+            ctx.stroke();
+          });
+
+          // Desenhar Partículas
+          gd.particles.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, 3, 3);
+          });
+
+          // Desenhar Textos Flutuantes
+          gd.floatingTexts.forEach(ft => {
+            ctx.fillStyle = ft.color;
+            ctx.font = 'bold 11px var(--font-mono)';
+            ctx.textAlign = 'center';
+            ctx.fillText(ft.text, ft.x, ft.y);
+          });
+
+          // Renderizar Informações de Iniciais (New Highscore)
+          if (gd.gameStatus === 'initials') {
+            renderInitialsOverlay();
+          }
+
+          // Loop Contínuo
+          gameLoopRef.current = requestAnimationFrame(updateGame);
+        };
+
+        const renderInitialsOverlay = () => {
+          // Caixa de Entrada de Iniciais
+          ctx.fillStyle = 'rgba(9, 9, 15, 0.95)';
+          ctx.fillRect(200, 150, 400, 200);
+          ctx.strokeStyle = varColor('--neon-gold');
+          ctx.lineWidth = 3;
+          ctx.strokeRect(200, 150, 400, 200);
+
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 18px var(--font-mono)';
+          ctx.textAlign = 'center';
+          ctx.fillText("NEW HIGH SCORE!", 400, 190);
+
+          ctx.fillStyle = varColor('--neon-cyan');
+          ctx.font = '13px var(--font-mono)';
+          ctx.fillText("ENTER YOUR INITIALS", 400, 220);
+
+          // Renderizar as 3 Letras
+          for (let i = 0; i < 3; i++) {
+            const char = gd.initialsInput[i];
+            const isSelected = gd.activeInitialIdx === i;
+            ctx.fillStyle = isSelected ? varColor('--neon-gold') : '#fff';
+            ctx.font = 'bold 36px var(--font-mono)';
+            ctx.fillText(char, 320 + i * 80, 280);
+
+            if (isSelected) {
+              ctx.strokeStyle = varColor('--neon-gold');
+              ctx.lineWidth = 4;
+              ctx.beginPath();
+              ctx.moveTo(300 + i * 80, 295);
+              ctx.lineTo(340 + i * 80, 295);
+              ctx.stroke();
+            }
+          }
+        };
+
+        // Auxiliar de Resolução de Cores de Variáveis
+        const varColor = (name) => {
+          return name === '--neon-cyan' ? '#00f0ff' : (name === '--neon-magenta' ? '#ff0055' : (name === '--neon-gold' ? '#ffb700' : '#ffffff'));
+        };
+
+        const gameInterval = setInterval(updateGame, 1000 / 60);
+        const drawInterval = setInterval(drawGame, 1000 / 60);
+
+        return () => {
+          clearInterval(gameInterval);
+          clearInterval(drawInterval);
+          if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
+        };
+      }, [gameRunning, campaignLevel]);
+
+      // Controlar Teclado Específico para Entrada de Iniciais de Pontuação
+      useEffect(() => {
+        if (screen !== 'playing') return;
+
+        const handleInitialsInput = (e) => {
+          const gd = gameData.current;
+          if (gd.gameStatus !== 'initials') return;
+
+          if (e.key === 'ArrowLeft') {
+            gd.activeInitialIdx = Math.max(0, gd.activeInitialIdx - 1);
+          }
+          else if (e.key === 'ArrowRight') {
+            gd.activeInitialIdx = Math.min(2, gd.activeInitialIdx + 1);
+          }
+          else if (e.key === 'ArrowUp') {
+            let code = gd.initialsInput[gd.activeInitialIdx].charCodeAt(0);
+            code = code === 90 ? 65 : code + 1; // Z -> A
+            gd.initialsInput[gd.activeInitialIdx] = String.fromCharCode(code);
+          }
+          else if (e.key === 'ArrowDown') {
+            let code = gd.initialsInput[gd.activeInitialIdx].charCodeAt(0);
+            code = code === 65 ? 90 : code - 1; // A -> Z
+            gd.initialsInput[gd.activeInitialIdx] = String.fromCharCode(code);
+          }
+          else if (e.key === 'Enter') {
+            if (gd.activeInitialIdx < 2) {
+              gd.activeInitialIdx++;
+            } else {
+              saveHighscore();
+            }
+          }
+        };
+
+        window.addEventListener('keydown', handleInitialsInput);
+        return () => window.removeEventListener('keydown', handleInitialsInput);
+      }, [screen]);
+
+      const saveHighscore = () => {
+        const gd = gameData.current;
+        const initials = gd.initialsInput.join('');
+        const totalSec = gd.survivalTimer;
+        
+        // Formatando tempo mm:ss.ms
+        const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+        const s = Math.floor(totalSec % 60).toString().padStart(2, '0');
+        const ms = Math.floor((totalSec % 1) * 100).toString().padStart(2, '0');
+        const formatted = `${m}:${s}.${ms}`;
+
+        const scoresKey = mode === '1P' ? 'scores_1p' : 'scores_2p';
+        let localScores = JSON.parse(localStorage.getItem(scoresKey) || '[]');
+        
+        localScores.push({ initials, time: formatted, rawTime: totalSec });
+        localScores.sort((a, b) => b.rawTime - a.rawTime); // Ordenar maiores tempos primeiro
+        localScores = localScores.slice(0, 5); // Apenas top 5
+        
+        localStorage.setItem(scoresKey, JSON.stringify(localScores));
+        gd.gameStatus = 'gameover';
+      };
+
+      const formatTime = (timeInSecs) => {
+        const m = Math.floor(timeInSecs / 60).toString().padStart(2, '0');
+        const s = Math.floor(timeInSecs % 60).toString().padStart(2, '0');
+        const ms = Math.floor((timeInSecs % 1) * 100).toString().padStart(2, '0');
+        return `${m}:${s}.${ms}`;
+      };
+
+      return (
+        <ErrorBoundary>
+          {screen === 'boot' && (
+            <div className="game-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', width: '380px', color: 'var(--neon-cyan)' }}>
+                <div style={{ marginBottom: '10px', color: '#fff' }}>SYSTEM BOOT V1.0.2 - NEURAL COIN</div>
+                <div>ROM CHECK: OK</div>
+                <div>RAM DETECTED: 512KB OK</div>
+                <div>AUDIO SYNTH GENERATOR: ACTIVE</div>
+                <div>FYSICS PHYSICS CORE: LOADED</div>
+                <div style={{ marginTop: '20px', height: '6px', background: '#111', position: 'relative' }}>
+                  <div style={{ height: '100%', background: 'var(--neon-cyan)', width: '70%', animation: 'pulse 1.8s infinite' }}></div>
+                </div>
+                <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '10px', color: 'var(--color-muted)' }}>
+                  (PRESSIONE QUALQUER TECLA / CLIQUE PARA ATIVAR O SOM)
+                </div>
+              </div>
+            </div>
+          )}
+
+          {screen === 'root' && (
+            <div className="game-screen" style={{ justifyContent: 'space-between' }}>
+              {/* Título Principal */}
+              <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: '800', color: '#fff', textShadow: '0 0 15px var(--neon-cyan)', letterSpacing: '0.08em', lineHeight: '1.1' }}>
+                  BUBBLE TROUBLE
+                </h1>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--neon-gold)', letterSpacing: '0.08em', marginTop: '5px' }}>
+                  CYBERPUNK COOPERATIVE ARCADE
+                </div>
+              </div>
+
+              {/* Lista de Opções do Menu */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '320px', margin: '0 auto' }}>
+                {[
+                  { label: "PLAY GAME", action: () => setScreen('levels') },
+                  { label: `MODE: ${mode}`, action: () => setMode(m => m === '1P' ? '2P' : '1P') },
+                  { label: "HIGH SCORES", action: () => setScreen('scores') },
+                  { label: "OPTIONS", action: () => setScreen('options') },
+                  { label: "SHUTDOWN SYSTEM", action: () => window.close() }
+                ].map((opt, idx) => {
+                  const active = idx === selectedMenuIdx;
+                  return (
+                    <div 
+                      key={idx}
+                      onClick={() => { setSelectedMenuIdx(idx); opt.action(); }}
+                      onMouseEnter={() => setSelectedMenuIdx(idx)}
+                      style={{
+                        padding: '12px 20px',
+                        border: `1.5px solid ${active ? 'var(--neon-gold)' : 'var(--color-border)'}`,
+                        background: active ? 'rgba(255, 183, 0, 0.08)' : 'rgba(26, 26, 40, 0.4)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: active ? 'var(--neon-gold)' : '#fff',
+                        boxShadow: active ? '0 0 10px rgba(255, 183, 0, 0.25)' : 'none',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span>{opt.label}</span>
+                      {active && <span style={{ animation: 'pulse 0.8s infinite' }}>►</span>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Rodapé e Legenda de Controles */}
+              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '10px', fontSize: '10px', color: 'var(--color-muted)', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span>P1: [A/D] MOVER · [SPACE] ATIRAR</span>
+                  <span>P2: [←/→] MOVER · [ENTER] ATIRAR</span>
+                </div>
+                <div style={{ textAlign: 'center', color: 'var(--neon-gold)', marginTop: '5px' }}>
+                  USE AS SETAS DO TECLADO PARA NAVEGAR · CONFIRME COM ENTER
+                </div>
+              </div>
+            </div>
+          )}
+
+          {screen === 'options' && (
+            <div className="game-screen" style={{ justifyContent: 'space-between' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', color: 'var(--neon-magenta)', textShadow: '0 0 10px rgba(255, 0, 85, 0.3)', marginBottom: '30px', textAlign: 'center' }}>
+                  SYSTEM OPTIONS
+                </h2>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '400px', margin: '0 auto' }}>
+                  {/* Slider de Música */}
+                  <div style={{
+                    padding: '15px',
+                    border: `1.5px solid ${selectedMenuIdx === 0 ? 'var(--neon-gold)' : 'var(--color-border)'}`,
+                    background: 'rgba(26, 26, 40, 0.4)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '13px', marginBottom: '10px' }}>
+                      <span>MUSIC VOLUME</span>
+                      <span style={{ color: 'var(--neon-cyan)' }}>{musicVol} / 10</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div 
+                          key={i} 
+                          onClick={() => setMusicVol(i + 1)}
+                          style={{
+                            height: '14px',
+                            flexGrow: 1,
+                            background: i < musicVol ? 'var(--neon-cyan)' : '#11111a',
+                            border: '1px solid #222',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Slider de SFX */}
+                  <div style={{
+                    padding: '15px',
+                    border: `1.5px solid ${selectedMenuIdx === 1 ? 'var(--neon-gold)' : 'var(--color-border)'}`,
+                    background: 'rgba(26, 26, 40, 0.4)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '13px', marginBottom: '10px' }}>
+                      <span>SFX VOLUME</span>
+                      <span style={{ color: 'var(--neon-magenta)' }}>{sfxVol} / 10</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div 
+                          key={i} 
+                          onClick={() => { setSfxVol(i + 1); sound.playPop(1); }}
+                          style={{
+                            height: '14px',
+                            flexGrow: 1,
+                            background: i < sfxVol ? 'var(--neon-magenta)' : '#11111a',
+                            border: '1px solid #222',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botão Back */}
+                  <div 
+                    onClick={() => setScreen('root')}
+                    style={{
+                      padding: '12px',
+                      border: `1.5px solid ${selectedMenuIdx === 2 ? 'var(--neon-gold)' : 'var(--color-border)'}`,
+                      background: selectedMenuIdx === 2 ? 'rgba(255, 183, 0, 0.08)' : 'rgba(26, 26, 40, 0.4)',
+                      textAlign: 'center',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      color: selectedMenuIdx === 2 ? 'var(--neon-gold)' : '#fff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    BACK TO MENU
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'center', fontSize: '10px', color: 'var(--color-muted)', fontFamily: 'var(--font-mono)' }}>
+                [ESC] RETORNAR · AJUSTE COM AS SETAS LATERAIS [← / →]
+              </div>
+            </div>
+          )}
+
+          {screen === 'levels' && (
+            <div className="game-screen" style={{ justifyContent: 'space-between' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', color: 'var(--neon-cyan)', marginBottom: '20px', textShadow: '0 0 10px rgba(0, 240, 255, 0.3)', textAlign: 'center' }}>
+                  SELECT LEVEL
+                </h2>
+
+                {/* Tabs Campaign vs Survival */}
+                <div style={{ display: 'flex', gap: '10px', width: '400px', margin: '0 auto 20px auto' }}>
+                  {['CAMPAIGN', 'SURVIVAL'].map(tab => {
+                    const isSelected = levelTab === tab.toLowerCase();
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setLevelTab(tab.toLowerCase())}
+                        style={{
+                          flexGrow: 1,
+                          padding: '10px',
+                          background: isSelected ? 'rgba(0, 240, 255, 0.12)' : 'rgba(26, 26, 40, 0.4)',
+                          border: `1.5px solid ${isSelected ? 'var(--neon-cyan)' : 'var(--color-border)'}`,
+                          color: isSelected ? 'var(--neon-cyan)' : '#fff',
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {tab}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {levelTab === 'campaign' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', maxWidth: '580px', margin: '0 auto' }}>
+                    {levelsList.map((lvl, idx) => {
+                      const active = idx === activeLevelIdx;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => { setActiveLevelIdx(idx); startGame(idx + 1, 'campaign'); }}
+                          onMouseEnter={() => setActiveLevelIdx(idx)}
+                          style={{
+                            padding: '12px',
+                            border: `1.5px solid ${active ? 'var(--neon-gold)' : 'var(--color-border)'}`,
+                            background: active ? 'rgba(255, 183, 0, 0.08)' : 'rgba(26, 26, 40, 0.4)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            gap: '12px',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div style={{
+                            width: '28px',
+                            height: '28px',
+                            background: active ? 'var(--neon-gold)' : '#1a1a2e',
+                            color: active ? '#000' : 'var(--neon-cyan)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '14px'
+                          }}>
+                            {String(idx + 1).padStart(2, '0')}
+                          </div>
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 'bold', color: active ? 'var(--neon-gold)' : '#fff' }}>
+                              {lvl.name}
+                            </div>
+                            <div style={{ fontSize: '10px', color: 'var(--color-muted)', marginTop: '2px' }}>
+                              {lvl.desc}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{
+                    maxWidth: '450px',
+                    margin: '0 auto',
+                    padding: '20px',
+                    border: '1.5px solid var(--neon-magenta)',
+                    background: 'rgba(255, 0, 85, 0.05)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ display: 'inline-block', padding: '4px 10px', background: 'var(--neon-magenta)', color: '#fff', fontWeight: 'bold', fontSize: '11px', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
+                      MODE S
+                    </div>
+                    <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', color: '#fff', marginBottom: '8px' }}>SURVIVAL ARENA</h3>
+                    <p style={{ fontSize: '11px', color: 'var(--color-muted)', marginBottom: '15px', lineHeight: '1.4' }}>
+                      Sobreviva à tempestade infinita de bolhas. Novas bolhas nascem a cada 16 segundos. Colete itens para estender sua integridade.
+                    </p>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--neon-gold)', borderTop: '1px solid #333', paddingTop: '10px' }}>
+                      BEST TIME ({mode}): {survivalHighTime}
+                    </div>
+                    <button
+                      onClick={() => startGame(1, 'survival')}
+                      style={{
+                        marginTop: '15px',
+                        background: 'var(--neon-magenta)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '10px 20px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    >
+                      START SURVIVAL
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div 
+                onClick={() => setScreen('root')}
+                style={{
+                  padding: '10px',
+                  border: '1.5px solid var(--color-border)',
+                  background: 'rgba(26, 26, 40, 0.4)',
+                  textAlign: 'center',
+                  width: '200px',
+                  margin: '0 auto',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  color: '#fff'
+                }}
+              >
+                BACK TO MENU
+              </div>
+            </div>
+          )}
+
+          {screen === 'scores' && (
+            <div className="game-screen" style={{ justifyContent: 'space-between' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', color: 'var(--neon-gold)', marginBottom: '20px', textShadow: '0 0 10px rgba(255, 183, 0, 0.3)', textAlign: 'center' }}>
+                  HIGH SCORES
+                </h2>
+
+                {/* Tabs de Modo 1P / 2P */}
+                <div style={{ display: 'flex', gap: '10px', width: '320px', margin: '0 auto 20px auto' }}>
+                  {['1P', '2P'].map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setScoresTab(t)}
+                      style={{
+                        flexGrow: 1,
+                        padding: '8px',
+                        background: scoresTab === t ? 'rgba(255, 183, 0, 0.1)' : 'rgba(26, 26, 40, 0.4)',
+                        border: `1.5px solid ${scoresTab === t ? 'var(--neon-gold)' : 'var(--color-border)'}`,
+                        color: scoresTab === t ? 'var(--neon-gold)' : '#fff',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {t} MODE
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ width: '400px', margin: '0 auto', background: 'rgba(26, 26, 40, 0.3)', border: '1px solid var(--color-border)', padding: '15px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #333', color: 'var(--color-muted)', textAlign: 'left' }}>
+                        <th style={{ padding: '6px' }}>RANK</th>
+                        <th>INITIALS</th>
+                        <th style={{ textAlign: 'right' }}>SURVIVAL TIME</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(scoresTab === '1P' ? [
+                        { initials: "NEO", time: "02:45.10" },
+                        { initials: "CYB", time: "02:12.40" },
+                        { initials: "BUB", time: "01:50.00" },
+                        { initials: "AAA", time: "01:10.50" },
+                        { initials: "P11", time: "00:45.30" }
+                      ] : [
+                        { initials: "CO+OP", time: "03:15.50" },
+                        { initials: "ARC+ADE", time: "02:40.00" },
+                        { initials: "NEO+TRN", time: "02:10.20" },
+                        { initials: "AAA+BBB", time: "01:30.80" },
+                        { initials: "SLD+SHL", time: "01:05.00" }
+                      ]).map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #1a1a2e', color: idx === 0 ? 'var(--neon-gold)' : '#fff' }}>
+                          <td style={{ padding: '8px 6px', fontWeight: 'bold' }}>#0{idx + 1}</td>
+                          <td>{row.initials}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{row.time}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => setScreen('root')}
+                style={{
+                  padding: '10px',
+                  border: '1.5px solid var(--color-border)',
+                  background: 'rgba(26, 26, 40, 0.4)',
+                  textAlign: 'center',
+                  width: '200px',
+                  margin: '0 auto',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  color: '#fff'
+                }}
+              >
+                BACK TO MENU
+              </div>
+            </div>
+          )}
+
+          {screen === 'playing' && (
+            <div className="game-screen" style={{ padding: '0', background: '#000', display: 'flex', flexDirection: 'column' }}>
+              {/* HUD Superior */}
+              <div style={{
+                height: '40px',
+                background: '#090912',
+                borderBottom: '2px solid var(--color-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 15px',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '11px'
+              }}>
+                <div style={{ color: 'var(--neon-cyan)' }}>
+                  MODE: {mode} ({campaignLevel > 0 ? `LEVEL ${campaignLevel}` : "SURVIVAL"})
+                </div>
+
+                {campaignLevel > 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '220px' }}>
+                    <span>LIMIT:</span>
+                    <div style={{ flexGrow: 1, height: '8px', background: '#111', border: '1px solid #333', position: 'relative' }}>
+                      <div style={{
+                        height: '100%',
+                        background: 'var(--neon-cyan)',
+                        width: `${(gameData.current.campaignTimer / 60) * 100}%`
+                      }}></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--neon-gold)' }}>
+                    TIME: {formatTime(gameData.current.survivalTimer)}
+                  </div>
+                )}
+
+                <div style={{ color: 'var(--neon-magenta)', fontWeight: 'bold' }}>
+                  SCORE: {String(gameData.current.score).padStart(6, '0')}
+                </div>
+              </div>
+
+              {/* Área do Canvas do Jogo */}
+              <div style={{ flexGrow: 1, position: 'relative' }}>
+                <canvas 
+                  ref={canvasRef} 
+                  width={800} 
+                  height={460} 
+                  style={{ width: '100%', height: '100%', display: 'block' }}
+                />
+
+                {/* Overlays de Jogo (Game Over / Won / Level Clear) */}
+                {gameData.current.gameStatus === 'gameover' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(9, 9, 15, 0.9)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: 'var(--font-mono)'
+                  }}>
+                    <h2 style={{ fontSize: '32px', color: 'var(--neon-magenta)', textShadow: '0 0 15px var(--neon-magenta)', marginBottom: '10px' }}>
+                      GAME OVER
+                    </h2>
+                    <p style={{ color: '#fff', fontSize: '13px', marginBottom: '20px' }}>
+                      {campaignLevel > 0 ? "O tempo acabou ou os jogadores cairam!" : `Tempo final: ${formatTime(gameData.current.survivalTimer)}`}
+                    </p>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                      <button 
+                        onClick={() => startGame(campaignLevel || 1, campaignLevel ? 'campaign' : 'survival')}
+                        style={{
+                          background: 'var(--neon-magenta)', color: '#fff', border: 'none',
+                          padding: '10px 20px', fontWeight: 'bold', cursor: 'pointer'
+                        }}
+                      >
+                        RETRY (R)
+                      </button>
+                      <button 
+                        onClick={exitGame}
+                        style={{
+                          background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid #333',
+                          padding: '10px 20px', fontWeight: 'bold', cursor: 'pointer'
+                        }}
+                      >
+                        MENU (ESC)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {gameData.current.gameStatus === 'win' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(9, 9, 15, 0.9)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: 'var(--font-mono)'
+                  }}>
+                    <h2 style={{ fontSize: '36px', color: 'var(--neon-cyan)', textShadow: '0 0 15px var(--neon-cyan)', marginBottom: '10px' }}>
+                      CAMPAIGN VICTORY
+                    </h2>
+                    <p style={{ color: 'var(--neon-gold)', fontSize: '14px', marginBottom: '25px' }}>
+                      YOU POPPED EVERY BUBBLE!
+                    </p>
+                    <button 
+                      onClick={exitGame}
+                      style={{
+                        background: 'var(--neon-cyan)', color: '#000', border: 'none',
+                        padding: '12px 25px', fontWeight: 'bold', cursor: 'pointer'
+                      }}
+                    >
+                      RETURN TO MENU
+                    </button>
+                  </div>
+                )}
+
+                {gameData.current.gameStatus === 'clear' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(9, 9, 15, 0.75)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: 'var(--font-mono)'
+                  }}>
+                    <h2 style={{ fontSize: '32px', color: 'var(--neon-green)', textShadow: '0 0 15px var(--neon-green)', marginBottom: '5px' }}>
+                      LEVEL CLEAR!
+                    </h2>
+                    <p style={{ color: '#fff', fontSize: '11px' }}>
+                      PREPARING SECURE PORTALS...
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Holograma de Controles Touch Virtuais para Testes Sem Teclado */}
+              <div style={{
+                height: '50px',
+                background: '#07070d',
+                borderTop: '2px solid var(--color-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '20px',
+                padding: '0 10px'
+              }}>
+                <button 
+                  onMouseDown={() => { gameData.current.keys['a'] = true; }}
+                  onMouseUp={() => { gameData.current.keys['a'] = false; }}
+                  onTouchStart={() => { gameData.current.keys['a'] = true; }}
+                  onTouchEnd={() => { gameData.current.keys['a'] = false; }}
+                  style={{ background: '#12121e', border: '1px solid #333', color: '#fff', padding: '6px 14px', fontSize: '11px', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}
+                >
+                  ◀ P1 LEFT
+                </button>
+                <button 
+                  onMouseDown={() => { gameData.current.keys['d'] = true; }}
+                  onMouseUp={() => { gameData.current.keys['d'] = false; }}
+                  onTouchStart={() => { gameData.current.keys['d'] = true; }}
+                  onTouchEnd={() => { gameData.current.keys['d'] = false; }}
+                  style={{ background: '#12121e', border: '1px solid #333', color: '#fff', padding: '6px 14px', fontSize: '11px', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}
+                >
+                  P1 RIGHT ▶
+                </button>
+                <button 
+                  onClick={() => { gameData.current.keys[' '] = true; setTimeout(() => gameData.current.keys[' '] = false, 100); }}
+                  style={{ background: 'var(--neon-cyan)', border: 'none', color: '#000', padding: '6px 18px', fontSize: '11px', fontWeight: 'bold', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}
+                >
+                  ☄ FIRE P1
+                </button>
+                <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
+                <button 
+                  onClick={() => { triggerCheatClear(); }}
+                  style={{ background: '#181829', border: '1px solid var(--neon-gold)', color: 'var(--neon-gold)', padding: '5px 12px', fontSize: '9px', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}
+                >
+                  ⚡ CHEAT: CLEAR
+                </button>
+                <button 
+                  onClick={exitGame}
+                  style={{ background: '#222', border: 'none', color: '#ccc', padding: '6px 14px', fontSize: '10px', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}
+                >
+                  EXIT (ESC)
+                </button>
+              </div>
+            </div>
+          )}
+        </ErrorBoundary>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
+  </script>
+
+</body>
+</html>

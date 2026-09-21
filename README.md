@@ -1,12 +1,12 @@
-# Bubble Trouble
-
 <p align="center">
-  <img src="docs/banner.svg" alt="Bubble Trouble — cyberpunk fan remake in Python and pygame." width="100%">
+  <img src="docs/banner.svg" alt="" width="100%">
 </p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+# Bubble Trouble
 
-**Unofficial fan remake** of classic Bubble Trouble, in Python and pygame — cyberpunk presentation, five-level campaign, Survival, local co-op, high scores.
+Unofficial cyberpunk fan remake. Campaign, survival, and local co-op.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Not affiliated with the original Bubble Trouble / Pang. Code is original ([MIT](LICENSE)); third-party art and audio are listed in [CREDITS.md](CREDITS.md).
 

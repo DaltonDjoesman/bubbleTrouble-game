@@ -27,6 +27,7 @@ __MACOSX/
 
 # Cursor (local skills/rules — not committed)
 .cursor/
+openspec/
 
 # Archives (extracted assets stay tracked)
 *.zip

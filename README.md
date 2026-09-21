@@ -10,7 +10,7 @@ Pop bouncing balls with growing chain harpoons. Play a **five-level campaign** a
 
 | Recruiter / quick scan | [Screenshots](#screenshots), [Run](#run), [CREDITS.md](CREDITS.md) |
 | Try it | `python Scripts/main.py` (see [Install](#install)) |
-| Specs / mockups | `openspec/` (history) · `designPrototype/` (HTML menus, **not** the game) |
+| Mockups | `designPrototype/` (HTML menus, **not** the game) |
 
 ## Screenshots
 
@@ -87,8 +87,7 @@ Scripts/           Game code (entry: Scripts/main.py)
 assets/            Runtime art (see CREDITS.md)
 audio/             Music and SFX (Kenney CC0)
 docs/              Gameplay notes and screenshots
-designPrototype/   HTML menu mockups — not shipped as the game
-openspec/          Specs and change history
+designPrototype/   HTML menu mockups — not the game
 ```
 
 ## Credits

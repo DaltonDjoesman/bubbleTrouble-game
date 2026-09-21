@@ -1,1 +1,3 @@
-https://craftpix.net/file-licenses/
+Craftpix Free License — https://craftpix.net/file-licenses/
+
+This folder holds only the PNG frames the game loads at runtime, not the original Craftpix zip/PSD packs. Do not redistribute these files as a standalone asset pack.

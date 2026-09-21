@@ -1,0 +1,7 @@
+# Menu mockups are HTML/CSS, not the game. Keep GitHub language stats on Python.
+designPrototype/** linguist-vendored
+
+# Spec history and screenshots are docs, not source.
+openspec/** linguist-documentation
+docs/** linguist-documentation
+CREDITS.md linguist-documentation

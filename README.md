@@ -1,13 +1,35 @@
 # Bubble Trouble
 
-A cyberpunk-styled take on classic Bubble Trouble, built with Python and pygame.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Pop bouncing balls with growing chain harpoons. Play a **five-level campaign** against a draining time barrier, or **Survival** against a rising chronometer. Solo or **local co-op**, with **High Scores** and **Options** for music and SFX.
+**Unofficial fan remake** of classic Bubble Trouble, in Python and pygame — cyberpunk presentation, five-level campaign, Survival, local co-op, high scores.
+
+Not affiliated with the original Bubble Trouble / Pang. Code is original ([MIT](LICENSE)); third-party art and audio are listed in [CREDITS.md](CREDITS.md).
+
+Pop bouncing balls with growing chain harpoons. Play a **five-level campaign** against a draining time barrier, or **Survival** against a rising chronometer. Solo or **local co-op**.
+
+| Recruiter / quick scan | [Screenshots](#screenshots), [Run](#run), [CREDITS.md](CREDITS.md) |
+| Try it | `python Scripts/main.py` (see [Install](#install)) |
+| Specs / mockups | `openspec/` (history) · `designPrototype/` (HTML menus, **not** the game) |
+
+## Screenshots
+
+Full 800×600 window (arena plus bottom status panel, or the menu shell).
+
+![Main menu](docs/screens/menu.png)
+
+![Campaign match](docs/screens/campaign.png)
+
+![Survival match](docs/screens/survival.png)
+
+![High Scores](docs/screens/high-scores.png)
+
+![In-match campaign loop](docs/screens/play.gif)
 
 ## Requirements
 
 - Python 3.10+
-- pygame 2.5+
+- pygame 2.5+ (see `requirements.txt`)
 
 ## Install
 
@@ -27,6 +49,8 @@ python Scripts/main.py
 
 The game opens on the main menu (800×600). A match does not start until you confirm Play and pick a level.
 
+Windows / Linux binaries are not in this repo yet; run from source.
+
 ## Modes
 
 | Mode | What it is |
@@ -38,20 +62,6 @@ The game opens on the main menu (800×600). A match does not start until you con
 | **Options** | Independent music and SFX volume (persisted locally). |
 
 Rules in detail: [docs/gameplay.md](docs/gameplay.md).
-
-## Screenshots
-
-Full 800×600 window (arena plus bottom status panel, or the menu shell — not a cropped playfield).
-
-![Main menu](docs/screens/menu.png)
-
-![Campaign match](docs/screens/campaign.png)
-
-![Survival match](docs/screens/survival.png)
-
-![High Scores](docs/screens/high-scores.png)
-
-![In-match campaign loop](docs/screens/play.gif)
 
 ## Controls
 
@@ -73,13 +83,18 @@ Movement is grounded (no jump). Crawl under barriers and doors through the gap a
 ## Project layout
 
 ```
-Scripts/     Game code (entry: Scripts/main.py)
-assets/      Art — ball, Craftpix characters/guns, chain, powerups, fonts
-audio/       Music and SFX (Kenney CC0)
-docs/        Gameplay notes and screenshots
-openspec/    Specs and change history
+Scripts/           Game code (entry: Scripts/main.py)
+assets/            Runtime art (see CREDITS.md)
+audio/             Music and SFX (Kenney CC0)
+docs/              Gameplay notes and screenshots
+designPrototype/   HTML menu mockups — not shipped as the game
+openspec/          Specs and change history
 ```
 
 ## Credits
 
-Third-party art and audio are listed in [CREDITS.md](CREDITS.md). Character and gun sprites are from the Craftpix cyberpunk pack; see [assets/craftpix/License.txt](assets/craftpix/License.txt).
+Third-party art and audio: [CREDITS.md](CREDITS.md).
+
+## License
+
+[MIT](LICENSE) for original code. Assets keep their own licenses as listed in CREDITS.

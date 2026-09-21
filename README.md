@@ -1,5 +1,9 @@
 # Bubble Trouble
 
+<p align="center">
+  <img src="docs/banner.svg" alt="Bubble Trouble — cyberpunk fan remake in Python and pygame." width="100%">
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Unofficial fan remake** of classic Bubble Trouble, in Python and pygame — cyberpunk presentation, five-level campaign, Survival, local co-op, high scores.
@@ -8,9 +12,11 @@ Not affiliated with the original Bubble Trouble / Pang. Code is original ([MIT](
 
 Pop bouncing balls with growing chain harpoons. Play a **five-level campaign** against a draining time barrier, or **Survival** against a rising chronometer. Solo or **local co-op**.
 
-| Recruiter / quick scan | [Screenshots](#screenshots), [Run](#run), [CREDITS.md](CREDITS.md) |
-| Try it | `python Scripts/main.py` (see [Install](#install)) |
-| Mockups | `designPrototype/` (HTML menus, **not** the game) |
+| If you want to | Go to |
+|----------------|--------|
+| See it | [Screenshots](#screenshots) · [Modes](#modes) |
+| Play it | [Install](#install) · [Run](#run) |
+| Check authorship | [CREDITS.md](CREDITS.md) · HTML files in `designPrototype/` are menu mockups, not the game |
 
 ## Screenshots
 
@@ -79,6 +85,10 @@ Movement is grounded (no jump). Crawl under barriers and doors through the gap a
 | High Scores | A/D (or Left/Right) switch 1P / 2P boards |
 | In match | Esc returns to the menu |
 | Win / game over | R restart, M or Esc return to menu |
+
+## Implementation
+
+The gameplay loop in `Scripts/main.py` runs campaign and survival, same-screen co-op input, and the HUD. Balls use gravity and split when hit (`Scripts/ball.py`). The harpoon is a cooldown-limited projectile (`Scripts/bullet.py`). Levels, high scores, menus, and audio live in their own modules. Art and sound are third-party; the split is listed in [CREDITS.md](CREDITS.md).
 
 ## Project layout
 

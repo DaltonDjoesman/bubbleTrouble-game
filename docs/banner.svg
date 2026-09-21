@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+  <title id="title">Bubble Trouble</title>
+  <desc id="desc">Unofficial cyberpunk fan remake in Python and pygame. Campaign, survival, and local co-op.</desc>
+  <rect width="1280" height="360" fill="#12081c"/>
+  <rect width="8" height="360" fill="#f472b6"/>
+  <circle cx="980" cy="150" r="54" fill="#ec4899" opacity="0.9"/>
+  <circle cx="1100" cy="210" r="36" fill="#22d3ee" opacity="0.85"/>
+  <circle cx="900" cy="240" r="22" fill="#a78bfa" opacity="0.8"/>
+  <g font-family="Segoe UI, Ubuntu, sans-serif">
+    <text x="72" y="118" fill="#f9a8d4" font-size="16" letter-spacing="3">FAN GAME / PYTHON</text>
+    <text x="72" y="188" fill="#fdf4ff" font-size="60" font-weight="700">Bubble Trouble</text>
+    <text x="72" y="236" fill="#e9d5ff" font-size="22">Campaign, survival, and local co-op. Original code.</text>
+  </g>
+  <g font-family="Segoe UI, Ubuntu, sans-serif" font-size="15" fill="#fae8ff">
+    <rect x="72" y="272" width="92" height="32" rx="16" fill="#3b0764"/>
+    <text x="118" y="293" text-anchor="middle">Python</text>
+    <rect x="176" y="272" width="96" height="32" rx="16" fill="#3b0764"/>
+    <text x="224" y="293" text-anchor="middle">pygame</text>
+  </g>
+</svg>

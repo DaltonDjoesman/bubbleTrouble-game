@@ -1,10 +1,8 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="" width="100%">
+  <img src="docs/banner.svg" alt="Bubble Trouble" width="100%">
 </p>
 
-# Bubble Trouble
-
-Unofficial cyberpunk fan remake. Campaign, survival, and local co-op.
+Unofficial cyberpunk fan remake of Bubble Trouble in Python and pygame. Campaign, survival, and local co-op.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
